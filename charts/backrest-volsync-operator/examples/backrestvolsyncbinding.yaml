@@ -2,7 +2,7 @@ apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
 metadata:
   name: my-app
-    namespace: backups
+  namespace: backups
 spec:
   backrest:
       url: http://backrest.backups.svc:9898
