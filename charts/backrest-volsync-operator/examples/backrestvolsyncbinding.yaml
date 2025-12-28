@@ -2,10 +2,10 @@ apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
 metadata:
   name: my-app
-  namespace: monitoring
+    namespace: backups
 spec:
   backrest:
-    url: http://backrest.monitoring.svc:9898
+      url: http://backrest.backups.svc:9898
   source:
     kind: ReplicationSource
     name: my-app-data

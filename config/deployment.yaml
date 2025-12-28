@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backrest-volsync-operator
-  namespace: monitoring
+  namespace: backups
 spec:
   replicas: 1
   selector:

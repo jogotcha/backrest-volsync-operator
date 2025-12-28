@@ -193,7 +193,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: backrest-volsync-operator
-  namespace: monitoring
+  namespace: backups
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -233,13 +233,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: backrest-volsync-operator
-    namespace: monitoring
+    namespace: backups
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backrest-volsync-operator
-  namespace: monitoring
+  namespace: backups
 spec:
   replicas: 1
   selector:
@@ -294,10 +294,10 @@ apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
 metadata:
   name: uptime-kuma-config-source
-  namespace: monitoring
+  namespace: backups
 spec:
   backrest:
-    url: http://backrest.monitoring.svc:9898
+    url: http://backrest.backups.svc:9898
   source:
     kind: ReplicationSource
     name: uptime-kuma-config-config
@@ -309,10 +309,10 @@ apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
 metadata:
   name: uptime-kuma-config-dest
-  namespace: monitoring
+  namespace: backups
 spec:
   backrest:
-    url: http://backrest.monitoring.svc:9898
+    url: http://backrest.backups.svc:9898
   source:
     kind: ReplicationDestination
     name: uptime-kuma-config-config-dest

@@ -26,10 +26,12 @@ This repo includes a Helm chart at `charts/backrest-volsync-operator`.
 Install into any namespace (the chart installs into `.Release.Namespace`):
 
 ```sh
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+NAMESPACE=backups
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
 helm install backrest-volsync-operator \
   oci://ghcr.io/<owner>/charts/backrest-volsync-operator \
-  --namespace monitoring \
+  --namespace "$NAMESPACE" \
   --create-namespace
 ```
 
@@ -38,7 +40,7 @@ Override the operator image if needed:
 ```sh
 helm upgrade --install backrest-volsync-operator \
   oci://ghcr.io/<owner>/charts/backrest-volsync-operator \
-  --namespace monitoring \
+  --namespace "$NAMESPACE" \
   --set image.repository=ghcr.io/<owner>/<repo> \
   --set image.tag=latest
 ```
@@ -74,9 +76,7 @@ make docker-build IMAGE=backrest-volsync-operator:dev
 ### GitHub Actions (GHCR)
 
 The workflow builds/pushes `ghcr.io/<owner>/<repo>` on pushes to `main` and tags.
-The default deployment image is set to `ghcr.io/jogotcha/backrest-volsync-operator:latest`.
-
-If your repo name differs, update the `image:` in `config/deployment.yaml`.
+If your repo name differs, update the default image in `config/deployment.yaml` (kustomize install) or override `image.*` via Helm.
 
 #### Helm chart publishing (GHCR OCI)
 
@@ -91,13 +91,7 @@ git tag chart-v0.1.0
 git push origin chart-v0.1.0
 ```
 
-### Deploy
-
-Ensure the `monitoring` namespace exists:
-
-```sh
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-```
+### Deploy (kustomize)
 
 Apply the operator resources:
 
@@ -108,7 +102,7 @@ kubectl apply -k config/
 If pulling from a private GHCR image, create an image pull secret and uncomment `imagePullSecrets` in `config/deployment.yaml`:
 
 ```sh
-kubectl -n monitoring create secret docker-registry ghcr-pull \
+kubectl -n backups create secret docker-registry ghcr-pull \
   --docker-server=ghcr.io \
   --docker-username=<github-username> \
   --docker-password=<github-pat-with-read:packages> \
@@ -126,10 +120,10 @@ apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
 metadata:
   name: my-app
-  namespace: monitoring
+  namespace: backups
 spec:
   backrest:
-    url: http://backrest.monitoring.svc:9898
+    url: http://backrest.backups.svc:9898
   source:
     kind: ReplicationSource
     name: my-app-data
@@ -150,14 +144,14 @@ apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncOperatorConfig
 metadata:
   name: backrest-volsync-operator
-  namespace: monitoring
+  namespace: backups
 spec:
   # Global kill-switch (disables Backrest API calls and auto-binding).
   paused: false
 
   # Defaults applied to generated Bindings.
   defaultBackrest:
-    url: http://backrest.monitoring.svc:9898
+    url: http://backrest.backups.svc:9898
     # authRef:
     #   name: backrest-auth
 
@@ -200,34 +194,6 @@ metadata:
 ## Notes / security
 
 Backrest stores `Repo.password` as plaintext in its config file. The operator avoids calling `GetConfig` and never writes credentials into status or logs, but Backrest’s own at-rest format remains unchanged.
-
-## Verify
-
-Watch the controller come up:
-
-```sh
-kubectl -n monitoring rollout status deploy/backrest-volsync-operator
-kubectl -n monitoring logs -f deploy/backrest-volsync-operator -c manager
-```
-
-Check Binding status (no secret material is stored in status):
-
-```sh
-kubectl -n monitoring get backrestvolsyncbindings
-kubectl -n monitoring get backrestvolsyncbinding <name> -o yaml
-```
-
-Confirm Backrest shows the repo:
-
-- The Backrest Service in this repo's examples is `backrest` in namespace `monitoring` (port `9898`).
-
-Port-forward the Backrest UI/API:
-
-```sh
-kubectl -n monitoring port-forward svc/backrest 9898:9898
-```
-
-Then open `http://127.0.0.1:9898` and confirm the repo IDs exist/updated.
 
 Notes:
 
