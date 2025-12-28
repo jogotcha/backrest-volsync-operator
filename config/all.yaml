@@ -1,0 +1,222 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: backrestvolsyncbindings.backrest.garethgeorge.com
+spec:
+  group: backrest.garethgeorge.com
+  scope: Namespaced
+  names:
+    plural: backrestvolsyncbindings
+    singular: backrestvolsyncbinding
+    kind: BackrestVolSyncBinding
+    shortNames:
+      - bvb
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [spec]
+          properties:
+            spec:
+              type: object
+              required: [backrest, source]
+              properties:
+                backrest:
+                  type: object
+                  required: [url]
+                  properties:
+                    url:
+                      type: string
+                      minLength: 1
+                    authRef:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                source:
+                  type: object
+                  required: [kind, name]
+                  properties:
+                    kind:
+                      type: string
+                      enum: [ReplicationSource, ReplicationDestination]
+                    name:
+                      type: string
+                      minLength: 1
+                repo:
+                  type: object
+                  properties:
+                    idOverride:
+                      type: string
+                    autoUnlock:
+                      type: boolean
+                    autoInitialize:
+                      type: boolean
+                    extraFlags:
+                      type: array
+                      items:
+                        type: string
+                    envAllowlist:
+                      type: array
+                      items:
+                        type: string
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                resolvedRepositorySecret:
+                  type: string
+                lastAppliedInputHash:
+                  type: string
+                lastApplyTime:
+                  type: string
+                  format: date-time
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, status, lastTransitionTime, reason, message]
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backrest-volsync-operator
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backrest-volsync-operator
+rules:
+  - apiGroups: ["backrest.garethgeorge.com"]
+    resources: ["backrestvolsyncbindings"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["backrest.garethgeorge.com"]
+    resources: ["backrestvolsyncbindings/status"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: ["volsync.backube"]
+    resources: ["replicationsources", "replicationdestinations"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backrest-volsync-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backrest-volsync-operator
+subjects:
+  - kind: ServiceAccount
+    name: backrest-volsync-operator
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backrest-volsync-operator
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backrest-volsync-operator
+  template:
+    metadata:
+      labels:
+        app: backrest-volsync-operator
+    spec:
+      serviceAccountName: backrest-volsync-operator
+      containers:
+        - name: manager
+          image: backrest-volsync-operator:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - --leader-elect=true
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+          ports:
+            - name: metrics
+              containerPort: 8080
+            - name: probes
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: probes
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: probes
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncBinding
+metadata:
+  name: uptime-kuma-config-source
+  namespace: monitoring
+spec:
+  backrest:
+    url: http://backrest.monitoring.svc:9898
+  source:
+    kind: ReplicationSource
+    name: uptime-kuma-config-config
+  repo:
+    idOverride: uptime-kuma-config
+    autoUnlock: true
+---
+apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncBinding
+metadata:
+  name: uptime-kuma-config-dest
+  namespace: monitoring
+spec:
+  backrest:
+    url: http://backrest.monitoring.svc:9898
+  source:
+    kind: ReplicationDestination
+    name: uptime-kuma-config-config-dest
+  repo:
+    idOverride: uptime-kuma-config-dest
+    autoUnlock: true

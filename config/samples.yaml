@@ -1,0 +1,31 @@
+apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncBinding
+metadata:
+  name: uptime-kuma-config-source
+  namespace: monitoring
+spec:
+  backrest:
+    url: http://backrest.monitoring.svc:9898
+    # authRef:
+    #   name: backrest-auth
+  source:
+    kind: ReplicationSource
+    name: uptime-kuma-config-config
+  repo:
+    idOverride: uptime-kuma-config
+    autoUnlock: true
+---
+apiVersion: backrest.garethgeorge.com/v1alpha1
+kind: BackrestVolSyncBinding
+metadata:
+  name: uptime-kuma-config-dest
+  namespace: monitoring
+spec:
+  backrest:
+    url: http://backrest.monitoring.svc:9898
+  source:
+    kind: ReplicationDestination
+    name: uptime-kuma-config-config-dest
+  repo:
+    idOverride: uptime-kuma-config-dest
+    autoUnlock: true
