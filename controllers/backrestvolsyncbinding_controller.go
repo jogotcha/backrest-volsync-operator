@@ -125,7 +125,16 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 	client := backrest.New(binding.Spec.Backrest.URL, auth)
 	_, err = client.AddRepo(ctx, repo)
 	if err != nil {
-		return r.fail(ctx, &binding, "BackrestAddRepoFailed", err)
+		if isAlreadyInitializedError(err) {
+			logger.Info(
+				"Backrest repo already initialized; treating as applied",
+				"repoID", repo.Id,
+				"volsyncKind", binding.Spec.Source.Kind,
+				"volsyncName", binding.Spec.Source.Name,
+			)
+		} else {
+			return r.fail(ctx, &binding, "BackrestAddRepoFailed", err)
+		}
 	}
 
 	logger.Info(
@@ -284,18 +293,20 @@ func (r *BackrestVolSyncBindingReconciler) loadBackrestAuth(ctx context.Context,
 }
 
 func (r *BackrestVolSyncBindingReconciler) fail(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, reason string, err error) (ctrl.Result, error) {
+	errHash := hashString(err.Error())
+	binding.Status.LastErrorHash = errHash
 	log.FromContext(ctx).Info(
 		"Reconcile failed",
 		"reason", reason,
-		"name", binding.Name,
 		"namespace", binding.Namespace,
-		"error", err.Error(),
+		"name", binding.Name,
+		"errorHash", errHash,
 	)
 	meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
 		Type:               conditionReady,
 		Status:             metav1.ConditionFalse,
 		Reason:             reason,
-		Message:            err.Error(),
+		Message:            fmt.Sprintf("%s (details omitted; errorHash=%s)", reason, errHash),
 		ObservedGeneration: binding.Generation,
 		LastTransitionTime: metav1.Now(),
 	})
@@ -303,6 +314,19 @@ func (r *BackrestVolSyncBindingReconciler) fail(ctx context.Context, binding *v1
 	_ = r.Status().Update(ctx, binding)
 	// Requeue with backoff handled by controller-runtime.
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+}
+
+func isAlreadyInitializedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "already initialized")
+}
+
+func hashString(s string) string {
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:])
 }
 
 func validateBinding(b *v1alpha1.BackrestVolSyncBinding) field.ErrorList {

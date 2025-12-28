@@ -78,6 +78,8 @@ spec:
                 lastApplyTime:
                   type: string
                   format: date-time
+                lastErrorHash:
+                  type: string
                 conditions:
                   type: array
                   items:

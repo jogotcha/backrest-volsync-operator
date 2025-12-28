@@ -55,6 +55,7 @@ type BackrestVolSyncBindingStatus struct {
 	ResolvedRepositorySecret string       `json:"resolvedRepositorySecret,omitempty"`
 	LastAppliedInputHash     string       `json:"lastAppliedInputHash,omitempty"`
 	LastApplyTime            *metav1.Time `json:"lastApplyTime,omitempty"`
+	LastErrorHash            string       `json:"lastErrorHash,omitempty"`
 }
 
 func init() {
@@ -72,6 +73,7 @@ func (in *BackrestVolSyncBinding) DeepCopyInto(out *BackrestVolSyncBinding) {
 		ObservedGeneration:       in.Status.ObservedGeneration,
 		ResolvedRepositorySecret: in.Status.ResolvedRepositorySecret,
 		LastAppliedInputHash:     in.Status.LastAppliedInputHash,
+		LastErrorHash:            in.Status.LastErrorHash,
 	}
 	if in.Status.LastApplyTime != nil {
 		out.Status.LastApplyTime = in.Status.LastApplyTime.DeepCopy()
