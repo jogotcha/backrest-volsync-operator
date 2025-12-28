@@ -38,24 +38,33 @@ type VolSyncAutoBindingReconciler struct {
 func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
+	logger.Info("VolSyncAutoBindingReconciler triggered", "namespace", req.Namespace, "name", req.Name)
+
 	cfg, err := LoadOperatorConfig(ctx, r.Client, r.OperatorConfig)
 	if err != nil {
+		logger.Error(err, "Failed to load operator config")
 		return ctrl.Result{}, err
 	}
 	if cfg.Paused {
+		logger.Info("Operator is paused, skipping")
 		return ctrl.Result{}, nil
 	}
 	if cfg.BindingPolicy == BindingPolicyDisabled {
+		logger.Info("Binding policy is disabled, skipping")
 		return ctrl.Result{}, nil
 	}
 
 	vsObj, kind, err := r.getVolSyncObjectEither(ctx, req.NamespacedName)
 	if err != nil {
+		logger.Error(err, "Failed to get VolSync object")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	logger.Info("Found VolSync object", "kind", kind, "name", vsObj.GetName())
+
 	allowed := isAutoBindingAllowed(cfg.BindingPolicy, vsObj)
 	if !allowed {
+		logger.Info("Auto-binding not allowed for this object", "kind", kind, "name", vsObj.GetName())
 		return ctrl.Result{}, nil
 	}
 
