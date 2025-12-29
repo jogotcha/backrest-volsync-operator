@@ -3,7 +3,7 @@ name: CI (main/tags) + Publish Image
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ['v*', '[0-9]*']
   workflow_dispatch:
 
 permissions:
