@@ -9,12 +9,14 @@ import (
 
 	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
 	"github.com/jogotcha/backrest-volsync-operator/pkg/volsync"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -31,7 +33,8 @@ const (
 
 type VolSyncAutoBindingReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 
 	OperatorConfig types.NamespacedName
 }
@@ -113,6 +116,9 @@ func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.R
 				return ctrl.Result{}, err
 			}
 			logger.Info("Created BackrestVolSyncBinding", "binding", desired.Name, "volsyncKind", kind, "volsyncName", vsObj.GetName())
+			if r.Recorder != nil {
+				r.Recorder.Eventf(vsObj, corev1.EventTypeNormal, "BindingCreated", "Created BackrestVolSyncBinding %s", desired.Name)
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -166,6 +172,9 @@ func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.R
 	if err := r.Patch(ctx, mutated, patch); err != nil {
 		return ctrl.Result{}, err
 	}
+	if r.Recorder != nil {
+		r.Recorder.Eventf(vsObj, corev1.EventTypeNormal, "BindingUpdated", "Updated BackrestVolSyncBinding %s", mutated.Name)
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -191,21 +200,53 @@ func (r *VolSyncAutoBindingReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			if obj.GetNamespace() != r.OperatorConfig.Namespace || obj.GetName() != r.OperatorConfig.Name {
 				return nil
 			}
-			reqs := make([]reconcile.Request, 0)
-			// Enqueue all ReplicationSources cluster-wide.
-			var rsList unstructured.UnstructuredList
-			rsList.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationSourceList"})
-			if err := r.List(ctx, &rsList); err == nil {
-				for i := range rsList.Items {
-					reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: rsList.Items[i].GetNamespace(), Name: rsList.Items[i].GetName()}})
+			cfg, ok := obj.(*v1alpha1.BackrestVolSyncOperatorConfig)
+			if !ok {
+				return nil
+			}
+			if cfg.Spec.Paused {
+				return nil
+			}
+			policy := strings.TrimSpace(cfg.Spec.BindingGeneration.Policy)
+			if policy == "" || BindingGenerationPolicy(policy) == BindingPolicyDisabled {
+				return nil
+			}
+			allowRS := true
+			allowRD := true
+			if len(cfg.Spec.BindingGeneration.Kinds) > 0 {
+				allowRS = false
+				allowRD = false
+				for _, k := range cfg.Spec.BindingGeneration.Kinds {
+					switch strings.TrimSpace(k) {
+					case "ReplicationSource":
+						allowRS = true
+					case "ReplicationDestination":
+						allowRD = true
+					}
 				}
 			}
-			// Enqueue all ReplicationDestinations cluster-wide.
-			var rdList unstructured.UnstructuredList
-			rdList.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationDestinationList"})
-			if err := r.List(ctx, &rdList); err == nil {
-				for i := range rdList.Items {
-					reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: rdList.Items[i].GetNamespace(), Name: rdList.Items[i].GetName()}})
+			if !allowRS && !allowRD {
+				return nil
+			}
+			reqs := make([]reconcile.Request, 0)
+			if allowRS {
+				// Enqueue all ReplicationSources cluster-wide.
+				var rsList unstructured.UnstructuredList
+				rsList.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationSourceList"})
+				if err := r.List(ctx, &rsList); err == nil {
+					for i := range rsList.Items {
+						reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: rsList.Items[i].GetNamespace(), Name: rsList.Items[i].GetName()}})
+					}
+				}
+			}
+			if allowRD {
+				// Enqueue all ReplicationDestinations cluster-wide.
+				var rdList unstructured.UnstructuredList
+				rdList.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationDestinationList"})
+				if err := r.List(ctx, &rdList); err == nil {
+					for i := range rdList.Items {
+						reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: rdList.Items[i].GetNamespace(), Name: rdList.Items[i].GetName()}})
+					}
 				}
 			}
 			return reqs

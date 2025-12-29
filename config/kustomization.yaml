@@ -1,6 +1,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Default install namespace. Override with `kustomize edit set namespace <ns>`.
+namespace: backups
+
 resources:
   - crd.yaml
   - operatorconfig_crd.yaml

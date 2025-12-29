@@ -67,6 +67,7 @@ func main() {
 	if err := (&controllers.BackrestVolSyncBindingReconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
+		Recorder:       mgr.GetEventRecorderFor("backrest-volsync-binding"),
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller")
@@ -76,6 +77,7 @@ func main() {
 	if err := (&controllers.VolSyncAutoBindingReconciler{
 		Client:         mgr.GetClient(),
 		Scheme:         mgr.GetScheme(),
+		Recorder:       mgr.GetEventRecorderFor("volsync-autobinding"),
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create VolSync auto-binding controller")

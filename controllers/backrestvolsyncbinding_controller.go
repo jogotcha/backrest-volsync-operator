@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +39,8 @@ const (
 
 type BackrestVolSyncBindingReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 
 	OperatorConfig types.NamespacedName
 }
@@ -54,6 +56,9 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 	if cfg, err := LoadOperatorConfig(ctx, r.Client, r.OperatorConfig); err != nil {
 		return ctrl.Result{}, err
 	} else if cfg.Paused {
+		if r.Recorder != nil {
+			r.Recorder.Event(&binding, corev1.EventTypeNormal, "Paused", "Operator is paused by BackrestVolSyncOperatorConfig")
+		}
 		meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
 			Type:               conditionReady,
 			Status:             metav1.ConditionFalse,
@@ -68,6 +73,9 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 
 	if errs := validateBinding(&binding); len(errs) > 0 {
 		err := errs.ToAggregate()
+		if r.Recorder != nil {
+			r.Recorder.Event(&binding, corev1.EventTypeWarning, "InvalidSpec", "Invalid spec; see status.conditions")
+		}
 		meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
 			Type:               conditionReady,
 			Status:             metav1.ConditionFalse,
@@ -152,6 +160,9 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 		"volsyncKind", binding.Spec.Source.Kind,
 		"volsyncName", binding.Spec.Source.Name,
 	)
+	if r.Recorder != nil {
+		r.Recorder.Event(&binding, corev1.EventTypeNormal, "Applied", "Repository registered/updated in Backrest")
+	}
 
 	now := metav1.Now()
 	binding.Status.ResolvedRepositorySecret = repoSecretName
@@ -238,7 +249,8 @@ func (r *BackrestVolSyncBindingReconciler) SetupWithManager(mgr ctrl.Manager) er
 				return nil
 			}
 			var list v1alpha1.BackrestVolSyncBindingList
-			if err := r.List(ctx, &list, client.InNamespace(obj.GetNamespace())); err != nil {
+			// Bindings can exist in any namespace (auto-binding is cluster-wide), so requeue them all.
+			if err := r.List(ctx, &list); err != nil {
 				return nil
 			}
 			reqs := make([]reconcile.Request, 0, len(list.Items))
@@ -338,6 +350,9 @@ func (r *BackrestVolSyncBindingReconciler) loadBackrestAuth(ctx context.Context,
 func (r *BackrestVolSyncBindingReconciler) fail(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, reason string, err error) (ctrl.Result, error) {
 	errHash := hashString(err.Error())
 	binding.Status.LastErrorHash = errHash
+	if r.Recorder != nil {
+		r.Recorder.Eventf(binding, corev1.EventTypeWarning, reason, "Reconcile failed (errorHash=%s)", errHash)
+	}
 	log.FromContext(ctx).Info(
 		"Reconcile failed",
 		"reason", reason,
