@@ -94,6 +94,21 @@ git tag chart-v0.1.0
 git push origin chart-v0.1.0
 ```
 
+## Automated versioning (release-please)
+
+This repo can use release-please to automate release PRs and tags.
+
+- On pushes to `main`, release-please opens/updates release PRs based on Conventional Commits.
+- When a release PR is merged, release-please creates tags:
+  - `vX.Y.Z` for the operator image (triggers the image publish workflow)
+  - `chart-vX.Y.Z` for the Helm chart (triggers the chart publish workflow)
+
+Common commit message examples:
+
+- `fix: handle nil secret data` -> patch bump
+- `feat: add OperatorConfig allowlist` -> minor bump
+- `feat!: change default binding policy` -> breaking bump (minor while <1.0.0)
+
 ### Deploy (kustomize)
 
 Apply the operator resources:
