@@ -22,8 +22,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: manager
-          image: ghcr.io/jogotcha/backrest-volsync-operator:latest
-          imagePullPolicy: Always
+          image: ghcr.io/jogotcha/backrest-volsync-operator:0.1.1
+          imagePullPolicy: IfNotPresent
           env:
             - name: POD_NAMESPACE
               valueFrom:

@@ -78,13 +78,16 @@ make docker-build IMAGE=backrest-volsync-operator:dev
 The workflow builds/pushes `ghcr.io/<owner>/<repo>` on pushes to `main` and tags.
 If your repo name differs, update the default image in `config/deployment.yaml` (kustomize install) or override `image.*` via Helm.
 
+For reproducible installs, the Helm chart defaults to a pinned `image.tag` (release version). Use `--set image.tag=latest` only if you explicitly want a floating tag.
+
 #### Helm chart publishing (GHCR OCI)
 
 The workflow in `.github/workflows/helm-chart-publish-oci.yaml` publishes the Helm chart to:
 
 `oci://ghcr.io/<owner>/charts/backrest-volsync-operator`
 
-To publish a new chart version, create a tag in the form `chart-vX.Y.Z` and push it:
+To publish a new chart version, create a tag in the form `chart-vX.Y.Z` and push it (this sets the chart `version`).
+The chart `appVersion` is read from `Chart.yaml` and is typically set to the operator image version you want the chart to deploy.
 
 ```sh
 git tag chart-v0.1.0

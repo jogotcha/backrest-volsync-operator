@@ -9,6 +9,10 @@ on:
         description: 'Chart version (e.g. 0.1.0). If empty, uses Chart.yaml as-is.'
         required: false
         type: string
+      appVersion:
+        description: 'Optional appVersion override (e.g. 0.1.1). If empty, keeps Chart.yaml appVersion.'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -48,12 +52,20 @@ jobs:
             VERSION="${{ inputs.version }}"
           fi
 
+          APP_VERSION="${{ inputs.appVersion }}"
+
           if [[ -n "${VERSION}" ]]; then
-            echo "Setting Chart.yaml version/appVersion to ${VERSION}"
+            echo "Setting Chart.yaml version to ${VERSION}"
             sed -i -E "s/^version:.*$/version: ${VERSION}/" "${CHART_FILE}"
-            sed -i -E "s/^appVersion:.*$/appVersion: \"${VERSION}\"/" "${CHART_FILE}"
           else
             echo "No version override provided; using Chart.yaml version"
+          fi
+
+          if [[ -n "${APP_VERSION}" ]]; then
+            echo "Setting Chart.yaml appVersion to ${APP_VERSION}"
+            sed -i -E "s/^appVersion:.*$/appVersion: \"${APP_VERSION}\"/" "${CHART_FILE}"
+          else
+            echo "No appVersion override provided; keeping Chart.yaml appVersion"
           fi
 
           echo "Final Chart.yaml:"

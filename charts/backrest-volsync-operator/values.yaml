@@ -7,8 +7,8 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/jogotcha/backrest-volsync-operator
-  tag: latest
-  pullPolicy: Always
+  tag: "0.1.1"
+  pullPolicy: IfNotPresent
 
 # Optional image pull secrets (e.g. for private GHCR)
 imagePullSecrets: []
