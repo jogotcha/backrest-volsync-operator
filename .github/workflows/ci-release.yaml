@@ -1,0 +1,38 @@
+name: CI (main/tags) + Publish Image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yaml
+    permissions:
+      contents: read
+
+  e2e:
+    uses: ./.github/workflows/e2e.yaml
+    permissions:
+      contents: read
+
+  build-and-push:
+    name: Build and push image (GHCR)
+    needs: [test, e2e]
+    uses: ./.github/workflows/ghcr-build-push.yaml
+    with:
+      push: true
+      platforms: linux/amd64,linux/arm64
+      sbom: true
+      provenance: true
+    permissions:
+      contents: read
+      packages: write

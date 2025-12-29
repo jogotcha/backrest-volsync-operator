@@ -1,10 +1,8 @@
 name: E2E (kind + Helm)
 
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -35,17 +33,24 @@ jobs:
         with:
           cluster_name: backrest-volsync-operator
 
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Install VolSync CRDs (vendored)
         shell: bash
         run: |
           set -euo pipefail
           kubectl apply -f testdata/crds/volsync/
 
-      - name: Build operator image
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker build -t backrest-volsync-operator:e2e .
+      - name: Build operator image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          tags: backrest-volsync-operator:e2e
+          platforms: linux/amd64
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Load image into kind
         shell: bash
