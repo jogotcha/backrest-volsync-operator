@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	v1 "github.com/garethgeorge/backrest/gen/go/v1"
 	"github.com/jogotcha/backrest-volsync-operator/api/v1alpha1"
@@ -198,7 +199,8 @@ func (e *sanitizedReconcileError) Error() string {
 func (r *BackrestVolSyncBindingReconciler) updateStatus(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding) (ctrl.Result, error) {
 	if err := r.Status().Update(ctx, binding); err != nil {
 		if apierrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
+			// Requeue quickly on conflict; controller-runtime is moving away from the Requeue boolean.
+			return ctrl.Result{RequeueAfter: 200 * time.Millisecond}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -369,7 +371,7 @@ func (r *BackrestVolSyncBindingReconciler) fail(ctx context.Context, binding *v1
 		LastTransitionTime: metav1.Now(),
 	})
 	binding.Status.ObservedGeneration = binding.Generation
-	if res, uerr := r.updateStatus(ctx, binding); uerr != nil || res.Requeue || res.RequeueAfter > 0 {
+	if res, uerr := r.updateStatus(ctx, binding); uerr != nil || res.RequeueAfter > 0 {
 		return res, uerr
 	}
 	// Trigger controller-runtime exponential backoff without logging the underlying error.

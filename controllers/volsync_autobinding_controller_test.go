@@ -151,7 +151,7 @@ func TestVolSyncAutoBindingReconcile_DoesNotTouchUserBinding(t *testing.T) {
 	userBinding.Name = "bvsb-rs-demo"
 	userBinding.Spec.Backrest.URL = "http://user"
 	userBinding.Spec.Source = v1alpha1.VolSyncSourceRef{Kind: "ReplicationSource", Name: "demo"}
-	userBinding.ObjectMeta.CreationTimestamp = metav1.Now()
+	userBinding.CreationTimestamp = metav1.Now()
 
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(cfg, vs, userBinding).Build()
 
