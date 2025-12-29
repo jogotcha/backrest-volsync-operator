@@ -1,0 +1,135 @@
+name: E2E (kind + Helm)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kind-helm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.12.0
+        with:
+          cluster_name: backrest-volsync-operator
+
+      - name: Install VolSync CRDs (vendored)
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl apply -f testdata/crds/volsync/
+
+      - name: Build operator image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build -t backrest-volsync-operator:e2e .
+
+      - name: Load image into kind
+        shell: bash
+        run: |
+          set -euo pipefail
+          kind load docker-image backrest-volsync-operator:e2e --name backrest-volsync-operator
+
+      - name: Install operator (Helm)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OP_NS=backrest-volsync-operator
+
+          helm upgrade --install backrest-volsync-operator charts/backrest-volsync-operator \
+            --namespace "$OP_NS" \
+            --create-namespace \
+            --set image.repository=backrest-volsync-operator \
+            --set image.tag=e2e \
+            --set image.pullPolicy=IfNotPresent \
+            --set operatorConfig.create=true \
+            --set operatorConfig.bindingGeneration=All \
+            --set operatorConfig.defaultBackrest.url=http://example.invalid
+
+          kubectl -n "$OP_NS" rollout status deploy/backrest-volsync-operator --timeout=180s
+
+      - name: Create ReplicationSource (no repository)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl create namespace workload --dry-run=client -o yaml | kubectl apply -f -
+
+          cat <<'YAML' | kubectl apply -f -
+          apiVersion: volsync.backube/v1alpha1
+          kind: ReplicationSource
+          metadata:
+            name: demo
+            namespace: workload
+          spec: {}
+          YAML
+
+      - name: Assert binding created
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for i in {1..60}; do
+            if kubectl -n workload get backrestvolsyncbinding bvsb-rs-demo >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "BackrestVolSyncBinding was not created"
+          kubectl -n workload get backrestvolsyncbinding -o yaml || true
+          exit 1
+
+      - name: Assert binding status reason
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for i in {1..60}; do
+            reason=$(kubectl -n workload get backrestvolsyncbinding bvsb-rs-demo -o jsonpath='{.status.conditions[?(@.type=="Ready")].reason}' || true)
+            if [[ "$reason" == "VolSyncMissingRepository" ]]; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Expected Ready.reason=VolSyncMissingRepository"
+          kubectl -n workload get backrestvolsyncbinding bvsb-rs-demo -o yaml || true
+          exit 1
+
+      - name: Diagnostics
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          OP_NS=backrest-volsync-operator
+          echo "--- operator namespace resources ---"
+          kubectl -n "$OP_NS" get all -o wide || true
+          echo "--- operator logs ---"
+          kubectl -n "$OP_NS" logs deploy/backrest-volsync-operator --all-containers=true --tail=200 || true
+          echo "--- workload binding ---"
+          kubectl -n workload get backrestvolsyncbinding bvsb-rs-demo -o yaml || true
