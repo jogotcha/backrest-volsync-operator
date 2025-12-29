@@ -16,7 +16,7 @@ spec:
     # Allowed values: ReplicationSource | ReplicationDestination
     # kinds: [ReplicationSource, ReplicationDestination]
     defaultRepo:
-      autoUnlock: true
+      # autoUnlock: true
 ---
 apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
@@ -33,7 +33,7 @@ spec:
     name: uptime-kuma-config-config
   repo:
     idOverride: uptime-kuma-config
-    autoUnlock: true
+    # autoUnlock: true
 ---
 apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding
@@ -48,4 +48,4 @@ spec:
     name: uptime-kuma-config-config-dest
   repo:
     idOverride: uptime-kuma-config-dest
-    autoUnlock: true
+    # autoUnlock: true

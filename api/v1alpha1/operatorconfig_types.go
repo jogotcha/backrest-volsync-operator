@@ -61,7 +61,6 @@ func init() {
 }
 
 // DeepCopyInto, DeepCopy, and DeepCopyObject are implemented manually to avoid requiring codegen.
-
 func (in *BackrestVolSyncOperatorConfig) DeepCopyInto(out *BackrestVolSyncOperatorConfig) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta

@@ -58,7 +58,29 @@ operatorConfig:
   bindingGenerationKinds: []
 
   # Defaults applied to generated bindings.
-  defaultRepo: {}
+  # These map to spec.bindingGeneration.defaultRepo on the OperatorConfig.
+  defaultRepo:
+    # Optional: override the repo ID used in generated bindings.
+    # idOverride: "my-repo-id"
+
+    # Optional: automatically unlock the repo (if supported by Backrest).
+    # Auto-unlock will remove lockfiles at the start of forget and prune operations.
+    # This is potentially unsafe if the repo is shared by multiple client devices.
+    # Disabled by default.
+    # autoUnlock: true
+
+    # Optional: automatically initialize the repo (if supported by Backrest).
+    # autoInitialize: true
+
+    # Optional: extra args passed to the Backrest repo/backup commands.
+    # Example disables repository lock usage:
+    # extraFlags:
+    #   - "--no-lock"
+
+    # Optional: list of environment variables allowed to be passed through.
+    # envAllowlist:
+    #   - "HTTPS_PROXY"
+    #   - "NO_PROXY"
 
 podSecurityContext:
   runAsNonRoot: true

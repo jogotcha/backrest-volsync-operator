@@ -16,4 +16,4 @@ spec:
     # Allowed values: ReplicationSource | ReplicationDestination
     # kinds: [ReplicationSource, ReplicationDestination]
     defaultRepo:
-      autoUnlock: true
+      # autoUnlock: true

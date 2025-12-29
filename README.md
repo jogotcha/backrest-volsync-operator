@@ -129,7 +129,6 @@ spec:
     name: my-app-data
   repo:
     idOverride: my-app-data
-    autoUnlock: true
 
 ```
 
@@ -163,7 +162,7 @@ spec:
     # If omitted/empty, both kinds are allowed.
     # kinds: [ReplicationSource, ReplicationDestination]
     defaultRepo:
-      autoUnlock: true
+      # autoUnlock: true
 ```
 
 ### Policy behavior
@@ -199,3 +198,5 @@ Notes:
 
 - The operator intentionally does **not** log or store secret values. If a reconcile fails, status will contain only non-sensitive metadata and an error hash.
 - On success, the operator logs `Backrest repo applied` with only the repo ID + VolSync reference.
+
+Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.

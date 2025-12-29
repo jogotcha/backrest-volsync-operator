@@ -132,7 +132,7 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 		Password:       resticPass,
 		Env:            env,
 		Flags:          append([]string(nil), binding.Spec.Repo.ExtraFlags...),
-		AutoUnlock:     ptr.Deref(binding.Spec.Repo.AutoUnlock, true),
+		AutoUnlock:     ptr.Deref(binding.Spec.Repo.AutoUnlock, false),
 		AutoInitialize: ptr.Deref(binding.Spec.Repo.AutoInitialize, false),
 	}
 
@@ -429,7 +429,7 @@ func computeInputHash(binding *v1alpha1.BackrestVolSyncBinding, vsObj *unstructu
 	write(binding.Spec.Source.Kind)
 	write(binding.Spec.Source.Name)
 	write(desiredRepoID(binding))
-	write(fmt.Sprintf("autoUnlock=%v", ptr.Deref(binding.Spec.Repo.AutoUnlock, true)))
+	write(fmt.Sprintf("autoUnlock=%v", ptr.Deref(binding.Spec.Repo.AutoUnlock, false)))
 	write(fmt.Sprintf("autoInitialize=%v", ptr.Deref(binding.Spec.Repo.AutoInitialize, false)))
 	flags := append([]string(nil), binding.Spec.Repo.ExtraFlags...)
 	sort.Strings(flags)

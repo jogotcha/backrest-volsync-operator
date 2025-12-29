@@ -41,7 +41,12 @@ type VolSyncSourceRef struct {
 }
 
 type BackrestRepoSpec struct {
-	IDOverride     string   `json:"idOverride,omitempty"`
+	IDOverride string `json:"idOverride,omitempty"`
+	// AutoUnlock controls Backrest's repo auto-unlock behavior.
+	//
+	// When enabled, Backrest will remove restic lockfiles at the start of forget and prune operations.
+	// This can be unsafe if the repository is shared by multiple client devices.
+	// Disabled by default.
 	AutoUnlock     *bool    `json:"autoUnlock,omitempty"`
 	AutoInitialize *bool    `json:"autoInitialize,omitempty"`
 	ExtraFlags     []string `json:"extraFlags,omitempty"`

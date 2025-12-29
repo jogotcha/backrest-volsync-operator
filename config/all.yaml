@@ -56,6 +56,8 @@ spec:
                       type: string
                     autoUnlock:
                       type: boolean
+                      default: false
+                      description: Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.
                     autoInitialize:
                       type: boolean
                     extraFlags:
@@ -152,6 +154,8 @@ spec:
                       properties:
                         autoUnlock:
                           type: boolean
+                          default: false
+                          description: Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.
                         autoInitialize:
                           type: boolean
                         extraFlags:
@@ -286,37 +290,7 @@ spec:
           resources:
             requests:
               cpu: 10m
-              memory: 64Mi
+              memory: 32Mi
             limits:
               cpu: 100m
-              memory: 256Mi
----
-apiVersion: backrest.garethgeorge.com/v1alpha1
-kind: BackrestVolSyncBinding
-metadata:
-  name: uptime-kuma-config-source
-  namespace: backups
-spec:
-  backrest:
-    url: http://backrest.backups.svc:9898
-  source:
-    kind: ReplicationSource
-    name: uptime-kuma-config-config
-  repo:
-    idOverride: uptime-kuma-config
-    autoUnlock: true
----
-apiVersion: backrest.garethgeorge.com/v1alpha1
-kind: BackrestVolSyncBinding
-metadata:
-  name: uptime-kuma-config-dest
-  namespace: backups
-spec:
-  backrest:
-    url: http://backrest.backups.svc:9898
-  source:
-    kind: ReplicationDestination
-    name: uptime-kuma-config-config-dest
-  repo:
-    idOverride: uptime-kuma-config-dest
-    autoUnlock: true
+              memory: 128Mi

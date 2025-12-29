@@ -1,6 +1,0 @@
-operatorConfig:
-  create: true
-  # Disabled | Annotated | All
-  bindingGeneration: All
-  defaultBackrest:
-    url: http://backrest.backrest.svc:9898

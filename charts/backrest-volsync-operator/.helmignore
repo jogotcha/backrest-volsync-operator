@@ -6,3 +6,4 @@
 *.rej
 .vscode/
 .idea/
+private_values.yaml

@@ -53,6 +53,8 @@ spec:
                       properties:
                         autoUnlock:
                           type: boolean
+                          default: false
+                          description: Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.
                         autoInitialize:
                           type: boolean
                         extraFlags:
