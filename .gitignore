@@ -13,6 +13,7 @@ dist/
 coverage.out
 *.test
 *.prof
+main
 
 ### Kustomize/Helm generated output
 *.tgz
