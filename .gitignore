@@ -19,3 +19,4 @@ coverage.out
 
 ### Python venv (sometimes used for scripts/tools)
 .venv/
+manager
