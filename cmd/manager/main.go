@@ -72,6 +72,7 @@ func main() {
 		// the controller checks for nil before using Recorder.
 		// TODO: Re-enable when new event recorder API is available in controller-runtime.
 		// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2141
+		Recorder:       nil,
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller")
@@ -86,6 +87,7 @@ func main() {
 		// the controller checks for nil before using Recorder.
 		// TODO: Re-enable when new event recorder API is available in controller-runtime.
 		// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2141
+		Recorder:       nil,
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create VolSync auto-binding controller")
