@@ -67,8 +67,10 @@ func main() {
 	if err := (&controllers.BackrestVolSyncBindingReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		// Recorder: Temporarily nil to avoid deprecated mgr.GetEventRecorderFor
-		// TODO: Re-enable when new event recorder API is available
+		// Recorder: Temporarily set to nil to avoid deprecated mgr.GetEventRecorderFor.
+		// This disables Kubernetes event recording for this controller, but is safe as
+		// the controller checks for nil before using Recorder.
+		// TODO: Re-enable when new event recorder API is available in controller-runtime.
 		// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2141
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
@@ -79,8 +81,10 @@ func main() {
 	if err := (&controllers.VolSyncAutoBindingReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		// Recorder: Temporarily nil to avoid deprecated mgr.GetEventRecorderFor
-		// TODO: Re-enable when new event recorder API is available
+		// Recorder: Temporarily set to nil to avoid deprecated mgr.GetEventRecorderFor.
+		// This disables Kubernetes event recording for this controller, but is safe as
+		// the controller checks for nil before using Recorder.
+		// TODO: Re-enable when new event recorder API is available in controller-runtime.
 		// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2141
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
