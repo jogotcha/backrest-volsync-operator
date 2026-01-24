@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -34,7 +34,7 @@ const (
 type VolSyncAutoBindingReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Recorder events.EventRecorder
 
 	OperatorConfig types.NamespacedName
 }
@@ -117,7 +117,7 @@ func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.R
 			}
 			logger.Info("Created BackrestVolSyncBinding", "binding", desired.Name, "volsyncKind", kind, "volsyncName", vsObj.GetName())
 			if r.Recorder != nil {
-				r.Recorder.Eventf(vsObj, corev1.EventTypeNormal, "BindingCreated", "Created BackrestVolSyncBinding %s", desired.Name)
+				r.Recorder.Eventf(vsObj, nil, corev1.EventTypeNormal, "BindingCreated", "CreateBinding", "Created BackrestVolSyncBinding %s", desired.Name)
 			}
 			return ctrl.Result{}, nil
 		}
@@ -173,7 +173,7 @@ func (r *VolSyncAutoBindingReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, err
 	}
 	if r.Recorder != nil {
-		r.Recorder.Eventf(vsObj, corev1.EventTypeNormal, "BindingUpdated", "Updated BackrestVolSyncBinding %s", mutated.Name)
+		r.Recorder.Eventf(vsObj, nil, corev1.EventTypeNormal, "BindingUpdated", "UpdateBinding", "Updated BackrestVolSyncBinding %s", mutated.Name)
 	}
 
 	return ctrl.Result{}, nil
