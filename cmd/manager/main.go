@@ -65,9 +65,11 @@ func main() {
 	}
 
 	if err := (&controllers.BackrestVolSyncBindingReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Recorder:       mgr.GetEventRecorderFor("backrest-volsync-binding"),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		// Recorder: Temporarily nil to avoid deprecated mgr.GetEventRecorderFor
+		// TODO: Re-enable when new event recorder API is available
+		// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2141
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create controller")
@@ -75,9 +77,11 @@ func main() {
 	}
 
 	if err := (&controllers.VolSyncAutoBindingReconciler{
-		Client:         mgr.GetClient(),
-		Scheme:         mgr.GetScheme(),
-		Recorder:       mgr.GetEventRecorderFor("volsync-autobinding"),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		// Recorder: Temporarily nil to avoid deprecated mgr.GetEventRecorderFor
+		// TODO: Re-enable when new event recorder API is available
+		// See: https://github.com/kubernetes-sigs/controller-runtime/issues/2141
 		OperatorConfig: types.NamespacedName{Namespace: operatorConfigNamespace, Name: operatorConfigName},
 	}).SetupWithManager(mgr); err != nil {
 		logger.Error(err, "unable to create VolSync auto-binding controller")
