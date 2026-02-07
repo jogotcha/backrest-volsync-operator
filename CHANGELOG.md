@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.2.0...v0.2.1) (2026-02-07)
+
+
+### Bug Fixes
+
+* **deps:** update k8s.io/utils digest to 914a6e7 ([#15](https://github.com/jogotcha/backrest-volsync-operator/issues/15)) ([1bb793d](https://github.com/jogotcha/backrest-volsync-operator/commit/1bb793dc2cbab1f3e51f983a5412f64496306464))
+* **deps:** update module github.com/garethgeorge/backrest to v1.11.1 ([#16](https://github.com/jogotcha/backrest-volsync-operator/issues/16)) ([c47f785](https://github.com/jogotcha/backrest-volsync-operator/commit/c47f7856b88bb82f46d134e90ddcc18c04c7ecca))
+* **deps:** update module github.com/garethgeorge/backrest to v1.11.2 ([#24](https://github.com/jogotcha/backrest-volsync-operator/issues/24)) ([d22a048](https://github.com/jogotcha/backrest-volsync-operator/commit/d22a048789addd9652c7806b014e0f52045ef665))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.23.0 ([#17](https://github.com/jogotcha/backrest-volsync-operator/issues/17)) ([e796a72](https://github.com/jogotcha/backrest-volsync-operator/commit/e796a723f0e1cb6d2004c11f2eacbb7031ad5b31))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.23.1 ([#23](https://github.com/jogotcha/backrest-volsync-operator/issues/23)) ([cb29557](https://github.com/jogotcha/backrest-volsync-operator/commit/cb29557cad2ab547e781f935a773a275d188f021))
+
 ## [0.2.0](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.1.1...v0.2.0) (2025-12-30)
 
 
