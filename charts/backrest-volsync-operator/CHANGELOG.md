@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/jogotcha/backrest-volsync-operator/compare/chart-v0.2.0...chart-v0.2.1) (2026-02-17)
+
+
+### Bug Fixes
+
+* **rbac:** allow creating events in events.k8s.io ([#32](https://github.com/jogotcha/backrest-volsync-operator/issues/32)) ([694fb73](https://github.com/jogotcha/backrest-volsync-operator/commit/694fb731fa857dc0f656e8e6e47b7b1321db336c)), closes [#27](https://github.com/jogotcha/backrest-volsync-operator/issues/27)
+
 ## [0.2.0](https://github.com/jogotcha/backrest-volsync-operator/compare/chart-v0.1.0...chart-v0.2.0) (2025-12-30)
 
 
