@@ -1,16 +1,18 @@
-name: CI (main/tags) + Publish Image
+name: "CI - Main Branch + Publish Image"
 
 on:
   push:
     branches: [main]
-    tags: ['v*', '[0-9]*']
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE*'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-release-${{ github.ref }}
+  group: ci-main-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,8 +26,8 @@ jobs:
     permissions:
       contents: read
 
-  build-and-push:
-    name: Build and push image (GHCR)
+  build-image-push:
+    name: Build and Push Image (GHCR)
     needs: [test, e2e]
     uses: ./.github/workflows/ghcr-build-push.yaml
     with:

@@ -1,4 +1,4 @@
-name: Test
+name: "CI - Test"
 
 on:
   workflow_call:
@@ -13,6 +13,7 @@ concurrency:
 jobs:
   go-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -31,6 +32,7 @@ jobs:
 
   golangci-lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -41,7 +43,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: golangci-lint
+      - name: GolangCI-Lint
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.7.2
@@ -49,6 +51,7 @@ jobs:
 
   helm-lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
