@@ -1,4 +1,4 @@
-name: Build and Push (GHCR)
+name: "Image - Build and Push (GHCR)"
 
 on:
   workflow_call:
@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: false
+      version:
+        description: Optional semver version (without leading v) used to add release tags
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: ghcr-${{ github.ref }}
@@ -57,6 +62,8 @@ jobs:
             type=sha,format=short
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=v${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ inputs.version }},enable=${{ inputs.version != '' }}
 
       - name: Build
         uses: docker/build-push-action@v6

@@ -1,4 +1,4 @@
-name: Release Please
+name: "Release - Release Please + Publish Artifacts"
 
 on:
   push:
@@ -17,6 +17,11 @@ concurrency:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      root_release_created: ${{ steps.rp.outputs.release_created }}
+      root_version: ${{ steps.rp.outputs.version }}
+      chart_release_created: ${{ steps.rp.outputs['charts/backrest-volsync-operator--release_created'] }}
+      chart_version: ${{ steps.rp.outputs['charts/backrest-volsync-operator--version'] }}
     steps:
       - name: Run release-please (manifest)
         id: rp
@@ -26,3 +31,28 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: main
+
+  publish-image:
+    if: ${{ needs.release-please.outputs.root_release_created == 'true' }}
+    needs: [release-please]
+    uses: ./.github/workflows/ghcr-build-push.yaml
+    with:
+      push: true
+      platforms: linux/amd64,linux/arm64
+      sbom: true
+      provenance: true
+      version: ${{ needs.release-please.outputs.root_version }}
+    permissions:
+      contents: read
+      packages: write
+
+  publish-chart:
+    if: ${{ needs.release-please.outputs.chart_release_created == 'true' }}
+    needs: [release-please]
+    uses: ./.github/workflows/helm-chart-publish-oci.yaml
+    with:
+      version: ${{ needs.release-please.outputs.chart_version }}
+      appVersion: ${{ needs.release-please.outputs.root_version }}
+    permissions:
+      contents: read
+      packages: write

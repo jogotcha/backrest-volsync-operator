@@ -1,6 +1,16 @@
-name: Publish Helm Chart (GHCR OCI)
+name: "Helm - Publish Chart (GHCR OCI)"
 
 on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Chart version (e.g. 0.1.0). If empty, uses Chart.yaml as-is.'
+        required: false
+        type: string
+      appVersion:
+        description: 'Optional appVersion override (e.g. 0.1.1). If empty, keeps Chart.yaml appVersion.'
+        required: false
+        type: string
   push:
     tags: ['chart-v*']
   workflow_dispatch:

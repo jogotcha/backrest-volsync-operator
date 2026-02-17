@@ -1,7 +1,10 @@
-name: CI (PR)
+name: "CI - Pull Request"
 
 on:
   pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'LICENSE*'
 
 permissions:
   contents: read
@@ -17,12 +20,13 @@ jobs:
       contents: read
 
   e2e:
+    if: ${{ !github.event.pull_request.draft }}
     uses: ./.github/workflows/e2e.yaml
     permissions:
       contents: read
 
-  image-build:
-    name: Image build (no push)
+  build-image:
+    name: Build Image (No Push)
     needs: [test]
     uses: ./.github/workflows/ghcr-build-push.yaml
     with:

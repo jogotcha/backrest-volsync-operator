@@ -57,3 +57,14 @@ make test
 make lint
 make docker-build
 ```
+
+## Release automation
+
+This repository uses Release Please to create releases, then publishes artifacts in the same workflow run:
+
+- Image publish: `.github/workflows/release-please.yaml` calls `.github/workflows/ghcr-build-push.yaml` when the root release is created
+- Helm chart publish: `.github/workflows/release-please.yaml` calls `.github/workflows/helm-chart-publish-oci.yaml` when the chart release is created
+
+Tag-triggered workflows still exist for manual/standalone runs:
+
+- Chart publish via tags: `.github/workflows/helm-chart-publish-oci.yaml` on tags like `chart-v0.2.1`
