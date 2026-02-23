@@ -28,7 +28,7 @@ func New(baseURL string, auth Auth) *Client {
 }
 
 func (c *Client) AddRepo(ctx context.Context, repo *v1.Repo) (*v1.Config, error) {
-	resp, err := c.backrest.AddRepo(ctx, connect.NewRequest(repo))
+	resp, err := c.backrest.AddRepo(ctx, connect.NewRequest(&v1.AddRepoRequest{Repo: repo}))
 	if err != nil {
 		return nil, err
 	}
