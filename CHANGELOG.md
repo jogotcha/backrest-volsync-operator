@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.2.1...v0.2.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* bump Go toolchain to 1.25.7 ([#35](https://github.com/jogotcha/backrest-volsync-operator/issues/35)) ([6ca2130](https://github.com/jogotcha/backrest-volsync-operator/commit/6ca2130e7c9e35e20eb1a4ee3433cfcfe24e7449))
+* **deps:** update module github.com/garethgeorge/backrest to v1.12.0 ([#38](https://github.com/jogotcha/backrest-volsync-operator/issues/38)) ([e7834b5](https://github.com/jogotcha/backrest-volsync-operator/commit/e7834b5a8288b9ce0a433c0c193441ea4ac0b0ba))
+
 ## [0.2.1](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.2.0...v0.2.1) (2026-02-17)
 
 
