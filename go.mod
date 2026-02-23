@@ -4,7 +4,7 @@ go 1.25.7
 
 require (
 	connectrpc.com/connect v1.19.1
-	github.com/garethgeorge/backrest v1.11.2
+	github.com/garethgeorge/backrest v1.12.0
 	github.com/go-logr/logr v1.4.3
 	go.uber.org/zap v1.27.1
 	k8s.io/api v0.35.1
