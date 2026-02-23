@@ -3,4 +3,4 @@ name: backrest-volsync-operator
 description: Kubernetes operator that registers VolSync restic repositories in Backrest.
 type: application
 version: 0.2.1
-appVersion: "0.1.1"
+appVersion: "0.2.1"
