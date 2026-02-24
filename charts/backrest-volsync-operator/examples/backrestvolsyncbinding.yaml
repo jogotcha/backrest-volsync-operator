@@ -11,3 +11,4 @@ spec:
     name: my-app-data
   repo:
     idOverride: my-app-data
+    triggerTasksOnSnapshot: true

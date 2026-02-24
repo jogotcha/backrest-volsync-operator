@@ -60,6 +60,10 @@ spec:
                       description: Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.
                     autoInitialize:
                       type: boolean
+                    triggerTasksOnSnapshot:
+                      type: boolean
+                      default: false
+                      description: Enqueue Backrest INDEX_SNAPSHOTS and STATS tasks when a bound ReplicationSource reports a new completed snapshot/sync marker. Disabled by default.
                     extraFlags:
                       type: array
                       items:
@@ -82,6 +86,15 @@ spec:
                   type: string
                   format: date-time
                 lastErrorHash:
+                  type: string
+                lastIndexedSnapshotMarker:
+                  type: string
+                lastSnapshotMarker:
+                  type: string
+                lastRepoTaskTriggerTime:
+                  type: string
+                  format: date-time
+                lastRepoTaskErrorHash:
                   type: string
                 conditions:
                   type: array
@@ -158,6 +171,10 @@ spec:
                           description: Auto-unlock will remove lockfiles at the start of forget and prune operations. This is potentially unsafe if the repo is shared by multiple client devices. Disabled by default.
                         autoInitialize:
                           type: boolean
+                        triggerTasksOnSnapshot:
+                          type: boolean
+                          default: false
+                          description: Enqueue Backrest INDEX_SNAPSHOTS and STATS tasks when a bound ReplicationSource reports a new completed snapshot/sync marker. Disabled by default.
                         extraFlags:
                           type: array
                           items:

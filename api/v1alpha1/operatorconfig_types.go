@@ -91,6 +91,10 @@ func (in *BackrestVolSyncOperatorConfig) DeepCopyInto(out *BackrestVolSyncOperat
 		v := *in.Spec.BindingGeneration.DefaultRepo.AutoInitialize
 		out.Spec.BindingGeneration.DefaultRepo.AutoInitialize = &v
 	}
+	if in.Spec.BindingGeneration.DefaultRepo.TriggerTasksOnSnapshot != nil {
+		v := *in.Spec.BindingGeneration.DefaultRepo.TriggerTasksOnSnapshot
+		out.Spec.BindingGeneration.DefaultRepo.TriggerTasksOnSnapshot = &v
+	}
 }
 
 func (in *BackrestVolSyncOperatorConfig) DeepCopy() *BackrestVolSyncOperatorConfig {

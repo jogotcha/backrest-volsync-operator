@@ -70,6 +70,11 @@ operatorConfig:
     # Optional: automatically initialize the repo (if supported by Backrest).
     # autoInitialize: true
 
+    # Optional: enqueue Backrest INDEX_SNAPSHOTS and STATS when a generated
+    # ReplicationSource binding observes a new completed snapshot/sync marker.
+    # Disabled by default.
+    # triggerTasksOnSnapshot: true
+
     # Optional: extra args passed to the Backrest repo/backup commands.
     # Example disables repository lock usage:
     # extraFlags:

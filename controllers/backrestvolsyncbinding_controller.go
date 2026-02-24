@@ -40,10 +40,16 @@ const (
 
 type BackrestVolSyncBindingReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder events.EventRecorder
+	Scheme                *runtime.Scheme
+	Recorder              events.EventRecorder
+	BackrestClientFactory func(baseURL string, auth backrest.Auth) backrestRepoClient
 
 	OperatorConfig types.NamespacedName
+}
+
+type backrestRepoClient interface {
+	AddRepo(ctx context.Context, repo *v1.Repo) (*v1.Config, error)
+	DoRepoTask(ctx context.Context, repoID string, task v1.DoRepoTaskRequest_Task) error
 }
 
 func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -111,79 +117,187 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	inputHash := computeInputHash(&binding, vsObj, &repoSecret)
-	if binding.Status.LastAppliedInputHash == inputHash && isReady(&binding) {
-		// Keep status in sync for resolved secret name.
-		if binding.Status.ResolvedRepositorySecret != repoSecretName {
-			binding.Status.ResolvedRepositorySecret = repoSecretName
-			binding.Status.ObservedGeneration = binding.Generation
-			return r.updateStatus(ctx, &binding)
+	shouldApplyRepo := binding.Status.LastAppliedInputHash != inputHash || !isReady(&binding)
+	statusChanged := false
+
+	if binding.Status.ResolvedRepositorySecret != repoSecretName {
+		binding.Status.ResolvedRepositorySecret = repoSecretName
+		statusChanged = true
+	}
+
+	shouldTriggerSnapshotTasks := binding.Spec.Source.Kind == "ReplicationSource" && ptr.Deref(binding.Spec.Repo.TriggerTasksOnSnapshot, false)
+	needsBackrestClient := shouldApplyRepo || shouldTriggerSnapshotTasks
+	var brClient backrestRepoClient
+	if needsBackrestClient {
+		auth, authErr := r.loadBackrestAuth(ctx, &binding)
+		if authErr != nil {
+			return r.fail(ctx, &binding, "BackrestAuthInvalid", authErr)
 		}
-		return ctrl.Result{}, nil
+		brClient = r.newBackrestClient(binding.Spec.Backrest.URL, auth)
 	}
 
-	auth, err := r.loadBackrestAuth(ctx, &binding)
-	if err != nil {
-		return r.fail(ctx, &binding, "BackrestAuthInvalid", err)
+	if shouldApplyRepo {
+		repo := &v1.Repo{
+			Id:             desiredRepoID(&binding),
+			Uri:            resticRepo,
+			Password:       resticPass,
+			Env:            env,
+			Flags:          append([]string(nil), binding.Spec.Repo.ExtraFlags...),
+			AutoUnlock:     ptr.Deref(binding.Spec.Repo.AutoUnlock, false),
+			AutoInitialize: ptr.Deref(binding.Spec.Repo.AutoInitialize, false),
+		}
+
+		// Ensure stable ordering so identical inputs do not churn.
+		sort.Strings(repo.Env)
+		sort.Strings(repo.Flags)
+
+		_, err = brClient.AddRepo(ctx, repo)
+		if err != nil {
+			if isAlreadyInitializedError(err) {
+				logger.Info(
+					"Backrest repo already initialized; treating as applied",
+					"repoID", repo.Id,
+					"volsyncKind", binding.Spec.Source.Kind,
+					"volsyncName", binding.Spec.Source.Name,
+				)
+			} else {
+				return r.fail(ctx, &binding, "BackrestAddRepoFailed", err)
+			}
+		}
+
+		logger.Info(
+			"Backrest repo applied",
+			"repoID", repo.Id,
+			"volsyncKind", binding.Spec.Source.Kind,
+			"volsyncName", binding.Spec.Source.Name,
+		)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(&binding, nil, corev1.EventTypeNormal, "Applied", "RegisterRepository", "Repository registered/updated in Backrest")
+		}
+
+		now := metav1.Now()
+		binding.Status.LastAppliedInputHash = inputHash
+		binding.Status.LastApplyTime = &now
+		meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
+			Type:               conditionReady,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Applied",
+			Message:            "Repository registered/updated in Backrest",
+			ObservedGeneration: binding.Generation,
+			LastTransitionTime: now,
+		})
+		statusChanged = true
 	}
 
-	repo := &v1.Repo{
-		Id:             desiredRepoID(&binding),
-		Uri:            resticRepo,
-		Password:       resticPass,
-		Env:            env,
-		Flags:          append([]string(nil), binding.Spec.Repo.ExtraFlags...),
-		AutoUnlock:     ptr.Deref(binding.Spec.Repo.AutoUnlock, false),
-		AutoInitialize: ptr.Deref(binding.Spec.Repo.AutoInitialize, false),
-	}
-
-	// Ensure stable ordering so identical inputs do not churn.
-	sort.Strings(repo.Env)
-	sort.Strings(repo.Flags)
-
-	client := backrest.New(binding.Spec.Backrest.URL, auth)
-	_, err = client.AddRepo(ctx, repo)
-	if err != nil {
-		if isAlreadyInitializedError(err) {
-			logger.Info(
-				"Backrest repo already initialized; treating as applied",
-				"repoID", repo.Id,
-				"volsyncKind", binding.Spec.Source.Kind,
-				"volsyncName", binding.Spec.Source.Name,
-			)
-		} else {
-			return r.fail(ctx, &binding, "BackrestAddRepoFailed", err)
+	if shouldTriggerSnapshotTasks {
+		if r.triggerSnapshotTasks(ctx, &binding, vsObj, brClient) {
+			statusChanged = true
 		}
 	}
 
-	logger.Info(
-		"Backrest repo applied",
-		"repoID", repo.Id,
-		"volsyncKind", binding.Spec.Source.Kind,
-		"volsyncName", binding.Spec.Source.Name,
-	)
-	if r.Recorder != nil {
-		r.Recorder.Eventf(&binding, nil, corev1.EventTypeNormal, "Applied", "RegisterRepository", "Repository registered/updated in Backrest")
-	}
-
-	now := metav1.Now()
-	binding.Status.ResolvedRepositorySecret = repoSecretName
-	binding.Status.LastAppliedInputHash = inputHash
-	binding.Status.LastApplyTime = &now
-	binding.Status.ObservedGeneration = binding.Generation
-	meta.SetStatusCondition(&binding.Status.Conditions, metav1.Condition{
-		Type:               conditionReady,
-		Status:             metav1.ConditionTrue,
-		Reason:             "Applied",
-		Message:            "Repository registered/updated in Backrest",
-		ObservedGeneration: binding.Generation,
-		LastTransitionTime: now,
-	})
-
-	if res, err := r.updateStatus(ctx, &binding); err != nil || res.RequeueAfter > 0 {
-		return res, err
+	if statusChanged {
+		binding.Status.ObservedGeneration = binding.Generation
+		if res, statusErr := r.updateStatus(ctx, &binding); statusErr != nil || res.RequeueAfter > 0 {
+			return res, statusErr
+		}
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *BackrestVolSyncBindingReconciler) newBackrestClient(baseURL string, auth backrest.Auth) backrestRepoClient {
+	if r.BackrestClientFactory != nil {
+		return r.BackrestClientFactory(baseURL, auth)
+	}
+	return backrest.New(baseURL, auth)
+}
+
+func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, vsObj *unstructured.Unstructured, brClient backrestRepoClient) bool {
+	logger := log.FromContext(ctx)
+	statusChanged := false
+	setTaskErrorHash := func(errHash string) {
+		if binding.Status.LastRepoTaskErrorHash != errHash {
+			binding.Status.LastRepoTaskErrorHash = errHash
+			statusChanged = true
+		}
+	}
+
+	marker, ready, err := volsync.ReplicationSourceCompletionMarker(vsObj)
+	if err != nil {
+		errHash := hashString(err.Error())
+		if binding.Status.LastRepoTaskErrorHash == errHash {
+			return false
+		}
+		setTaskErrorHash(errHash)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerSkipped", "ParseVolSyncStatus", "Unable to parse VolSync completion marker (errorHash=%s)", errHash)
+		}
+		logger.Info("Unable to parse VolSync completion marker", "namespace", binding.Namespace, "name", binding.Name, "errorHash", errHash)
+		return statusChanged
+	}
+	if !ready || marker == "" {
+		return false
+	}
+	if binding.Status.LastSnapshotMarker == marker {
+		return false
+	}
+
+	repoID := desiredRepoID(binding)
+	if binding.Status.LastIndexedSnapshotMarker != marker {
+		if err := brClient.DoRepoTask(ctx, repoID, v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS); err != nil {
+			errHash := hashString(err.Error())
+			setTaskErrorHash(errHash)
+			if r.Recorder != nil {
+				r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerFailed", "DoRepoTask", "Failed to enqueue %s for repo %s (errorHash=%s)", v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS.String(), repoID, errHash)
+			}
+			logger.Info(
+				"Failed to enqueue Backrest repo task",
+				"repoID", repoID,
+				"task", v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS.String(),
+				"namespace", binding.Namespace,
+				"name", binding.Name,
+				"errorHash", errHash,
+			)
+			return statusChanged
+		}
+		binding.Status.LastIndexedSnapshotMarker = marker
+		statusChanged = true
+	}
+
+	if err := brClient.DoRepoTask(ctx, repoID, v1.DoRepoTaskRequest_TASK_STATS); err != nil {
+		errHash := hashString(err.Error())
+		setTaskErrorHash(errHash)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerFailed", "DoRepoTask", "Failed to enqueue %s for repo %s (errorHash=%s)", v1.DoRepoTaskRequest_TASK_STATS.String(), repoID, errHash)
+		}
+		logger.Info(
+			"Failed to enqueue Backrest repo task",
+			"repoID", repoID,
+			"task", v1.DoRepoTaskRequest_TASK_STATS.String(),
+			"namespace", binding.Namespace,
+			"name", binding.Name,
+			"errorHash", errHash,
+		)
+		return statusChanged
+	}
+
+	now := metav1.Now()
+	binding.Status.LastSnapshotMarker = marker
+	binding.Status.LastRepoTaskTriggerTime = &now
+	if binding.Status.LastRepoTaskErrorHash != "" {
+		binding.Status.LastRepoTaskErrorHash = ""
+	}
+	statusChanged = true
+	if r.Recorder != nil {
+		r.Recorder.Eventf(binding, nil, corev1.EventTypeNormal, "TasksTriggered", "DoRepoTask", "Triggered INDEX_SNAPSHOTS and STATS for repo %s", repoID)
+	}
+	logger.Info(
+		"Triggered Backrest repo tasks for snapshot completion",
+		"repoID", repoID,
+		"namespace", binding.Namespace,
+		"name", binding.Name,
+	)
+	return statusChanged
 }
 
 type sanitizedReconcileError struct {

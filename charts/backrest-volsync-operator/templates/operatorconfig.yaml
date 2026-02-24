@@ -21,7 +21,7 @@ spec:
       {{- toYaml .Values.operatorConfig.bindingGenerationKinds | nindent 6 }}
     {{- end }}
     {{- $dr := .Values.operatorConfig.defaultRepo -}}
-    {{- if or (hasKey $dr "idOverride") (hasKey $dr "autoUnlock") (hasKey $dr "autoInitialize") (hasKey $dr "extraFlags") (hasKey $dr "envAllowlist") }}
+    {{- if or (hasKey $dr "idOverride") (hasKey $dr "autoUnlock") (hasKey $dr "autoInitialize") (hasKey $dr "triggerTasksOnSnapshot") (hasKey $dr "extraFlags") (hasKey $dr "envAllowlist") }}
     defaultRepo:
       {{- if hasKey $dr "idOverride" }}
       idOverride: {{ $dr.idOverride | quote }}
@@ -31,6 +31,9 @@ spec:
       {{- end }}
       {{- if hasKey $dr "autoInitialize" }}
       autoInitialize: {{ $dr.autoInitialize }}
+      {{- end }}
+      {{- if hasKey $dr "triggerTasksOnSnapshot" }}
+      triggerTasksOnSnapshot: {{ $dr.triggerTasksOnSnapshot }}
       {{- end }}
       {{- if hasKey $dr "extraFlags" }}
       extraFlags:

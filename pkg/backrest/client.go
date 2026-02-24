@@ -35,6 +35,11 @@ func (c *Client) AddRepo(ctx context.Context, repo *v1.Repo) (*v1.Config, error)
 	return resp.Msg, nil
 }
 
+func (c *Client) DoRepoTask(ctx context.Context, repoID string, task v1.DoRepoTaskRequest_Task) error {
+	_, err := c.backrest.DoRepoTask(ctx, connect.NewRequest(&v1.DoRepoTaskRequest{RepoId: repoID, Task: task}))
+	return err
+}
+
 func authInterceptor(auth Auth) connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {

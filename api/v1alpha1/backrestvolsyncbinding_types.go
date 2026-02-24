@@ -47,10 +47,14 @@ type BackrestRepoSpec struct {
 	// When enabled, Backrest will remove restic lockfiles at the start of forget and prune operations.
 	// This can be unsafe if the repository is shared by multiple client devices.
 	// Disabled by default.
-	AutoUnlock     *bool    `json:"autoUnlock,omitempty"`
-	AutoInitialize *bool    `json:"autoInitialize,omitempty"`
-	ExtraFlags     []string `json:"extraFlags,omitempty"`
-	EnvAllowlist   []string `json:"envAllowlist,omitempty"`
+	AutoUnlock     *bool `json:"autoUnlock,omitempty"`
+	AutoInitialize *bool `json:"autoInitialize,omitempty"`
+	// TriggerTasksOnSnapshot enables enqueueing Backrest INDEX_SNAPSHOTS and STATS
+	// tasks when a bound ReplicationSource reports a new completed snapshot/sync marker.
+	// Disabled by default.
+	TriggerTasksOnSnapshot *bool    `json:"triggerTasksOnSnapshot,omitempty"`
+	ExtraFlags             []string `json:"extraFlags,omitempty"`
+	EnvAllowlist           []string `json:"envAllowlist,omitempty"`
 }
 
 type BackrestVolSyncBindingStatus struct {
@@ -61,6 +65,10 @@ type BackrestVolSyncBindingStatus struct {
 	LastAppliedInputHash     string       `json:"lastAppliedInputHash,omitempty"`
 	LastApplyTime            *metav1.Time `json:"lastApplyTime,omitempty"`
 	LastErrorHash            string       `json:"lastErrorHash,omitempty"`
+	LastIndexedSnapshotMarker string      `json:"lastIndexedSnapshotMarker,omitempty"`
+	LastSnapshotMarker       string       `json:"lastSnapshotMarker,omitempty"`
+	LastRepoTaskTriggerTime  *metav1.Time `json:"lastRepoTaskTriggerTime,omitempty"`
+	LastRepoTaskErrorHash    string       `json:"lastRepoTaskErrorHash,omitempty"`
 }
 
 func init() {
@@ -79,9 +87,15 @@ func (in *BackrestVolSyncBinding) DeepCopyInto(out *BackrestVolSyncBinding) {
 		ResolvedRepositorySecret: in.Status.ResolvedRepositorySecret,
 		LastAppliedInputHash:     in.Status.LastAppliedInputHash,
 		LastErrorHash:            in.Status.LastErrorHash,
+		LastIndexedSnapshotMarker: in.Status.LastIndexedSnapshotMarker,
+		LastSnapshotMarker:       in.Status.LastSnapshotMarker,
+		LastRepoTaskErrorHash:    in.Status.LastRepoTaskErrorHash,
 	}
 	if in.Status.LastApplyTime != nil {
 		out.Status.LastApplyTime = in.Status.LastApplyTime.DeepCopy()
+	}
+	if in.Status.LastRepoTaskTriggerTime != nil {
+		out.Status.LastRepoTaskTriggerTime = in.Status.LastRepoTaskTriggerTime.DeepCopy()
 	}
 	if in.Status.Conditions != nil {
 		out.Status.Conditions = make([]metav1.Condition, len(in.Status.Conditions))
@@ -103,6 +117,10 @@ func (in *BackrestVolSyncBinding) DeepCopyInto(out *BackrestVolSyncBinding) {
 	if in.Spec.Repo.AutoInitialize != nil {
 		v := *in.Spec.Repo.AutoInitialize
 		out.Spec.Repo.AutoInitialize = &v
+	}
+	if in.Spec.Repo.TriggerTasksOnSnapshot != nil {
+		v := *in.Spec.Repo.TriggerTasksOnSnapshot
+		out.Spec.Repo.TriggerTasksOnSnapshot = &v
 	}
 }
 
