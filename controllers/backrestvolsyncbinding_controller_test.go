@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	v1 "github.com/garethgeorge/backrest/gen/go/v1"
@@ -22,6 +23,7 @@ import (
 type fakeBackrestRepoClient struct {
 	addRepoCalls int
 	taskCalls    []v1.DoRepoTaskRequest_Task
+	failTaskErrs map[v1.DoRepoTaskRequest_Task]error
 }
 
 func (f *fakeBackrestRepoClient) AddRepo(_ context.Context, _ *v1.Repo) (*v1.Config, error) {
@@ -31,6 +33,11 @@ func (f *fakeBackrestRepoClient) AddRepo(_ context.Context, _ *v1.Repo) (*v1.Con
 
 func (f *fakeBackrestRepoClient) DoRepoTask(_ context.Context, _ string, task v1.DoRepoTaskRequest_Task) error {
 	f.taskCalls = append(f.taskCalls, task)
+	if f.failTaskErrs != nil {
+		if err, ok := f.failTaskErrs[task]; ok {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -449,6 +456,109 @@ func TestBackrestVolSyncBindingReconcile_DoesNotTriggerSnapshotTasksByDefault(t 
 	}
 	if len(br.taskCalls) != 0 {
 		t.Fatalf("expected 0 task calls, got %d", len(br.taskCalls))
+	}
+}
+
+func TestBackrestVolSyncBindingReconcile_DoesNotReenqueueIndexWhenOnlyStatsFails(t *testing.T) {
+	ctx := context.Background()
+	scheme := bindingTestScheme(t)
+
+	b := &v1alpha1.BackrestVolSyncBinding{}
+	b.Namespace = "workload"
+	b.Name = "b"
+	b.Spec.Backrest.URL = "http://backrest.invalid"
+	b.Spec.Source = v1alpha1.VolSyncSourceRef{Kind: "ReplicationSource", Name: "demo"}
+	enabled := true
+	b.Spec.Repo.TriggerTasksOnSnapshot = &enabled
+
+	vs := &unstructured.Unstructured{}
+	vs.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationSource"})
+	vs.SetNamespace("workload")
+	vs.SetName("demo")
+	vs.SetUID(types.UID("1111"))
+	vs.Object = map[string]any{
+		"apiVersion": volsync.Group + "/" + volsync.Version,
+		"kind":       "ReplicationSource",
+		"metadata": map[string]any{
+			"name":      "demo",
+			"namespace": "workload",
+		},
+		"spec": map[string]any{
+			"restic": map[string]any{
+				"repository": "repo-secret",
+			},
+		},
+		"status": map[string]any{
+			"lastSyncTime": "2026-02-24T12:00:00Z",
+			"lastSnapshot": "snap-1",
+		},
+	}
+
+	sec := &corev1.Secret{}
+	sec.Namespace = "workload"
+	sec.Name = "repo-secret"
+	sec.Data = map[string][]byte{
+		"RESTIC_REPOSITORY": []byte("s3://bucket/repo"),
+		"RESTIC_PASSWORD":   []byte("pass"),
+	}
+	sec.SetUID(types.UID("2222"))
+	sec.SetResourceVersion("1")
+
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&v1alpha1.BackrestVolSyncBinding{}).
+		WithObjects(b, vs, sec).
+		Build()
+
+	br := &fakeBackrestRepoClient{
+		failTaskErrs: map[v1.DoRepoTaskRequest_Task]error{
+			v1.DoRepoTaskRequest_TASK_STATS: errors.New("stats down"),
+		},
+	}
+	r := &BackrestVolSyncBindingReconciler{
+		Client: c,
+		Scheme: scheme,
+		BackrestClientFactory: func(_ string, _ backrest.Auth) backrestRepoClient {
+			return br
+		},
+	}
+
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: b.Namespace, Name: b.Name}}); err != nil {
+		t.Fatalf("reconcile #1: %v", err)
+	}
+
+	var got v1alpha1.BackrestVolSyncBinding
+	if err := c.Get(ctx, types.NamespacedName{Namespace: b.Namespace, Name: b.Name}, &got); err != nil {
+		t.Fatalf("get after reconcile #1: %v", err)
+	}
+	if got.Status.LastIndexedSnapshotMarker == "" {
+		t.Fatalf("expected LastIndexedSnapshotMarker set")
+	}
+	if got.Status.LastSnapshotMarker != "" {
+		t.Fatalf("expected LastSnapshotMarker unset while stats fails")
+	}
+
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: b.Namespace, Name: b.Name}}); err != nil {
+		t.Fatalf("reconcile #2: %v", err)
+	}
+	if len(br.taskCalls) != 3 {
+		t.Fatalf("expected 3 task calls total, got %d", len(br.taskCalls))
+	}
+	if br.taskCalls[0] != v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS || br.taskCalls[1] != v1.DoRepoTaskRequest_TASK_STATS || br.taskCalls[2] != v1.DoRepoTaskRequest_TASK_STATS {
+		t.Fatalf("expected index then stats retries only, got %#v", br.taskCalls)
+	}
+
+	delete(br.failTaskErrs, v1.DoRepoTaskRequest_TASK_STATS)
+	if _, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: b.Namespace, Name: b.Name}}); err != nil {
+		t.Fatalf("reconcile #3: %v", err)
+	}
+	if len(br.taskCalls) != 4 || br.taskCalls[3] != v1.DoRepoTaskRequest_TASK_STATS {
+		t.Fatalf("expected final stats enqueue only, got %#v", br.taskCalls)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: b.Namespace, Name: b.Name}, &got); err != nil {
+		t.Fatalf("get after reconcile #3: %v", err)
+	}
+	if got.Status.LastSnapshotMarker == "" {
+		t.Fatalf("expected LastSnapshotMarker set after stats succeeds")
 	}
 }
 

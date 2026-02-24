@@ -214,6 +214,13 @@ func (r *BackrestVolSyncBindingReconciler) newBackrestClient(baseURL string, aut
 
 func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, vsObj *unstructured.Unstructured, brClient backrestRepoClient) bool {
 	logger := log.FromContext(ctx)
+	statusChanged := false
+	setTaskErrorHash := func(errHash string) {
+		if binding.Status.LastRepoTaskErrorHash != errHash {
+			binding.Status.LastRepoTaskErrorHash = errHash
+			statusChanged = true
+		}
+	}
 
 	marker, ready, err := volsync.ReplicationSourceCompletionMarker(vsObj)
 	if err != nil {
@@ -221,12 +228,12 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 		if binding.Status.LastRepoTaskErrorHash == errHash {
 			return false
 		}
-		binding.Status.LastRepoTaskErrorHash = errHash
+		setTaskErrorHash(errHash)
 		if r.Recorder != nil {
 			r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerSkipped", "ParseVolSyncStatus", "Unable to parse VolSync completion marker (errorHash=%s)", errHash)
 		}
 		logger.Info("Unable to parse VolSync completion marker", "namespace", binding.Namespace, "name", binding.Name, "errorHash", errHash)
-		return true
+		return statusChanged
 	}
 	if !ready || marker == "" {
 		return false
@@ -236,29 +243,51 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 	}
 
 	repoID := desiredRepoID(binding)
-	for _, task := range []v1.DoRepoTaskRequest_Task{v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS, v1.DoRepoTaskRequest_TASK_STATS} {
-		if err := brClient.DoRepoTask(ctx, repoID, task); err != nil {
+	if binding.Status.LastIndexedSnapshotMarker != marker {
+		if err := brClient.DoRepoTask(ctx, repoID, v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS); err != nil {
 			errHash := hashString(err.Error())
-			binding.Status.LastRepoTaskErrorHash = errHash
+			setTaskErrorHash(errHash)
 			if r.Recorder != nil {
-				r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerFailed", "DoRepoTask", "Failed to enqueue %s for repo %s (errorHash=%s)", task.String(), repoID, errHash)
+				r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerFailed", "DoRepoTask", "Failed to enqueue %s for repo %s (errorHash=%s)", v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS.String(), repoID, errHash)
 			}
 			logger.Info(
 				"Failed to enqueue Backrest repo task",
 				"repoID", repoID,
-				"task", task.String(),
+				"task", v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS.String(),
 				"namespace", binding.Namespace,
 				"name", binding.Name,
 				"errorHash", errHash,
 			)
-			return true
+			return statusChanged
 		}
+		binding.Status.LastIndexedSnapshotMarker = marker
+		statusChanged = true
+	}
+
+	if err := brClient.DoRepoTask(ctx, repoID, v1.DoRepoTaskRequest_TASK_STATS); err != nil {
+		errHash := hashString(err.Error())
+		setTaskErrorHash(errHash)
+		if r.Recorder != nil {
+			r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerFailed", "DoRepoTask", "Failed to enqueue %s for repo %s (errorHash=%s)", v1.DoRepoTaskRequest_TASK_STATS.String(), repoID, errHash)
+		}
+		logger.Info(
+			"Failed to enqueue Backrest repo task",
+			"repoID", repoID,
+			"task", v1.DoRepoTaskRequest_TASK_STATS.String(),
+			"namespace", binding.Namespace,
+			"name", binding.Name,
+			"errorHash", errHash,
+		)
+		return statusChanged
 	}
 
 	now := metav1.Now()
 	binding.Status.LastSnapshotMarker = marker
 	binding.Status.LastRepoTaskTriggerTime = &now
-	binding.Status.LastRepoTaskErrorHash = ""
+	if binding.Status.LastRepoTaskErrorHash != "" {
+		binding.Status.LastRepoTaskErrorHash = ""
+	}
+	statusChanged = true
 	if r.Recorder != nil {
 		r.Recorder.Eventf(binding, nil, corev1.EventTypeNormal, "TasksTriggered", "DoRepoTask", "Triggered INDEX_SNAPSHOTS and STATS for repo %s", repoID)
 	}
@@ -268,7 +297,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 		"namespace", binding.Namespace,
 		"name", binding.Name,
 	)
-	return true
+	return statusChanged
 }
 
 type sanitizedReconcileError struct {

@@ -87,6 +87,8 @@ spec:
                   format: date-time
                 lastErrorHash:
                   type: string
+                lastIndexedSnapshotMarker:
+                  type: string
                 lastSnapshotMarker:
                   type: string
                 lastRepoTaskTriggerTime:
