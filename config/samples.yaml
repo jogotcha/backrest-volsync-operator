@@ -33,6 +33,7 @@ spec:
     name: uptime-kuma-config-config
   repo:
     idOverride: uptime-kuma-config
+    triggerTasksOnSnapshot: true
 ---
 apiVersion: backrest.garethgeorge.com/v1alpha1
 kind: BackrestVolSyncBinding

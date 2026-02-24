@@ -40,6 +40,12 @@ helm upgrade --install backrest-volsync-operator ./charts/backrest-volsync-opera
 
 Create a `BackrestVolSyncBinding` (example: `charts/backrest-volsync-operator/examples/backrestvolsyncbinding.yaml`).
 
+To enqueue Backrest repo tasks after new ReplicationSource snapshots, set:
+
+- `spec.repo.triggerTasksOnSnapshot: true`
+
+When enabled, the operator queues `INDEX_SNAPSHOTS` then `STATS` once per new observed completion marker.
+
 ```sh
 kubectl apply -f charts/backrest-volsync-operator/examples/backrestvolsyncbinding.yaml
 ```
