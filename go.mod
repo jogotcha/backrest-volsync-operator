@@ -7,9 +7,9 @@ require (
 	github.com/garethgeorge/backrest v1.12.0
 	github.com/go-logr/logr v1.4.3
 	go.uber.org/zap v1.27.1
-	k8s.io/api v0.35.1
-	k8s.io/apimachinery v0.35.1
-	k8s.io/client-go v0.35.1
+	k8s.io/api v0.35.2
+	k8s.io/apimachinery v0.35.2
+	k8s.io/client-go v0.35.2
 	k8s.io/utils v0.0.0-20260210185600-b8788abfbbc2
 	sigs.k8s.io/controller-runtime v0.23.1
 )
