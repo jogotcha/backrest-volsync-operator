@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.2.2...v0.3.0) (2026-02-28)
+
+
+### Features
+
+* trigger Backrest INDEX_SNAPSHOTS and STATS from VolSync snapshots ([#42](https://github.com/jogotcha/backrest-volsync-operator/issues/42)) ([a4ae8b2](https://github.com/jogotcha/backrest-volsync-operator/commit/a4ae8b2b124900e81fec45bc820226f7e41f4be9))
+
+
+### Bug Fixes
+
+* **ci:** release please push to main should not trigger build-image-push ([31f1a01](https://github.com/jogotcha/backrest-volsync-operator/commit/31f1a01abc0afc7bb859abe97473a76cddb38dbc))
+* **deps:** update kubernetes packages to v0.35.2 ([#43](https://github.com/jogotcha/backrest-volsync-operator/issues/43)) ([d2ec1fb](https://github.com/jogotcha/backrest-volsync-operator/commit/d2ec1fb9e12d0bafd9b5d960625b7d3e63ee1bac))
+* **makefile:** make lint cross-platform ([#45](https://github.com/jogotcha/backrest-volsync-operator/issues/45)) ([491f0b9](https://github.com/jogotcha/backrest-volsync-operator/commit/491f0b900bd1678f14b08a73d906575859db1638))
+* Stabilize VolSync marker to dedupe repo task triggers ([#44](https://github.com/jogotcha/backrest-volsync-operator/issues/44)) ([378e881](https://github.com/jogotcha/backrest-volsync-operator/commit/378e8814f63ee504b210c96edcb25a2c4cf7a9a9))
+
 ## [0.2.2](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.2.1...v0.2.2) (2026-02-23)
 
 
