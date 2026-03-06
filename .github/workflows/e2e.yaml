@@ -35,7 +35,7 @@ jobs:
           cluster_name: backrest-volsync-operator
 
       - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Install VolSync CRDs (vendored)
         shell: bash
