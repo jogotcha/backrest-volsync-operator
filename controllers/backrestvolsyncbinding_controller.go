@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	v1 "github.com/garethgeorge/backrest/gen/go/v1"
@@ -45,6 +46,9 @@ type BackrestVolSyncBindingReconciler struct {
 	BackrestClientFactory func(baseURL string, auth backrest.Auth) backrestRepoClient
 
 	OperatorConfig types.NamespacedName
+
+	taskTriggerMu       sync.Mutex
+	inflightTaskMarkers map[string]string
 }
 
 type backrestRepoClient interface {
@@ -190,7 +194,11 @@ func (r *BackrestVolSyncBindingReconciler) Reconcile(ctx context.Context, req ct
 	}
 
 	if shouldTriggerSnapshotTasks {
-		if r.triggerSnapshotTasks(ctx, &binding, vsObj, brClient) {
+		taskStatusChanged, releaseTaskTrigger := r.triggerSnapshotTasks(ctx, &binding, vsObj, brClient)
+		if releaseTaskTrigger != nil {
+			defer releaseTaskTrigger()
+		}
+		if taskStatusChanged {
 			statusChanged = true
 		}
 	}
@@ -212,7 +220,7 @@ func (r *BackrestVolSyncBindingReconciler) newBackrestClient(baseURL string, aut
 	return backrest.New(baseURL, auth)
 }
 
-func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, vsObj *unstructured.Unstructured, brClient backrestRepoClient) bool {
+func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Context, binding *v1alpha1.BackrestVolSyncBinding, vsObj *unstructured.Unstructured, brClient backrestRepoClient) (bool, func()) {
 	logger := log.FromContext(ctx)
 	statusChanged := false
 	setTaskErrorHash := func(errHash string) {
@@ -226,20 +234,25 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 	if err != nil {
 		errHash := hashString(err.Error())
 		if binding.Status.LastRepoTaskErrorHash == errHash {
-			return false
+			return false, nil
 		}
 		setTaskErrorHash(errHash)
 		if r.Recorder != nil {
 			r.Recorder.Eventf(binding, nil, corev1.EventTypeWarning, "TaskTriggerSkipped", "ParseVolSyncStatus", "Unable to parse VolSync completion marker (errorHash=%s)", errHash)
 		}
 		logger.Info("Unable to parse VolSync completion marker", "namespace", binding.Namespace, "name", binding.Name, "errorHash", errHash)
-		return statusChanged
+		return statusChanged, nil
 	}
 	if !ready || marker == "" {
-		return false
+		return false, nil
 	}
 	if binding.Status.LastSnapshotMarker == marker {
-		return false
+		return false, nil
+	}
+
+	releaseTaskTrigger, claimed := r.claimTaskTrigger(binding, marker)
+	if !claimed {
+		return false, nil
 	}
 
 	repoID := desiredRepoID(binding)
@@ -258,7 +271,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 				"name", binding.Name,
 				"errorHash", errHash,
 			)
-			return statusChanged
+			return statusChanged, releaseTaskTrigger
 		}
 		binding.Status.LastIndexedSnapshotMarker = marker
 		statusChanged = true
@@ -278,7 +291,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 			"name", binding.Name,
 			"errorHash", errHash,
 		)
-		return statusChanged
+		return statusChanged, releaseTaskTrigger
 	}
 
 	now := metav1.Now()
@@ -297,7 +310,28 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 		"namespace", binding.Namespace,
 		"name", binding.Name,
 	)
-	return statusChanged
+	return statusChanged, releaseTaskTrigger
+}
+
+func (r *BackrestVolSyncBindingReconciler) claimTaskTrigger(binding *v1alpha1.BackrestVolSyncBinding, marker string) (func(), bool) {
+	key := types.NamespacedName{Namespace: binding.Namespace, Name: binding.Name}.String()
+
+	r.taskTriggerMu.Lock()
+	defer r.taskTriggerMu.Unlock()
+
+	if r.inflightTaskMarkers == nil {
+		r.inflightTaskMarkers = make(map[string]string)
+	}
+	if _, exists := r.inflightTaskMarkers[key]; exists {
+		return nil, false
+	}
+	r.inflightTaskMarkers[key] = marker
+
+	return func() {
+		r.taskTriggerMu.Lock()
+		defer r.taskTriggerMu.Unlock()
+		delete(r.inflightTaskMarkers, key)
+	}, true
 }
 
 type sanitizedReconcileError struct {
