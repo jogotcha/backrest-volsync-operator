@@ -11,6 +11,8 @@ import (
 	"github.com/garethgeorge/backrest/gen/go/v1/v1connect"
 )
 
+const clientTimeout = 2 * time.Minute
+
 type Auth struct {
 	BasicUsername string
 	BasicPassword string
@@ -22,7 +24,7 @@ type Client struct {
 }
 
 func New(baseURL string, auth Auth) *Client {
-	httpClient := &http.Client{Timeout: 30 * time.Second}
+	httpClient := &http.Client{Timeout: clientTimeout}
 	interceptors := connect.WithInterceptors(authInterceptor(auth))
 	return &Client{backrest: v1connect.NewBackrestClient(httpClient, baseURL, interceptors)}
 }

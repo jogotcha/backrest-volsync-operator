@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	v1 "github.com/garethgeorge/backrest/gen/go/v1"
@@ -21,24 +22,48 @@ import (
 )
 
 type fakeBackrestRepoClient struct {
-	addRepoCalls int
-	taskCalls    []v1.DoRepoTaskRequest_Task
-	failTaskErrs map[v1.DoRepoTaskRequest_Task]error
+	mu                sync.Mutex
+	addRepoCalls      int
+	taskCalls         []v1.DoRepoTaskRequest_Task
+	failTaskErrs      map[v1.DoRepoTaskRequest_Task]error
+	firstTaskStarted  chan struct{}
+	releaseTaskCalls  <-chan struct{}
+	firstTaskSignaled bool
 }
 
 func (f *fakeBackrestRepoClient) AddRepo(_ context.Context, _ *v1.Repo) (*v1.Config, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.addRepoCalls++
 	return &v1.Config{}, nil
 }
 
 func (f *fakeBackrestRepoClient) DoRepoTask(_ context.Context, _ string, task v1.DoRepoTaskRequest_Task) error {
+	f.mu.Lock()
 	f.taskCalls = append(f.taskCalls, task)
+	if f.firstTaskStarted != nil && !f.firstTaskSignaled {
+		close(f.firstTaskStarted)
+		f.firstTaskSignaled = true
+	}
+	releaseTaskCalls := f.releaseTaskCalls
+	f.mu.Unlock()
+
+	if releaseTaskCalls != nil {
+		<-releaseTaskCalls
+	}
+
 	if f.failTaskErrs != nil {
 		if err, ok := f.failTaskErrs[task]; ok {
 			return err
 		}
 	}
 	return nil
+}
+
+func (f *fakeBackrestRepoClient) snapshotTaskCalls() []v1.DoRepoTaskRequest_Task {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]v1.DoRepoTaskRequest_Task(nil), f.taskCalls...)
 }
 
 func bindingTestScheme(t *testing.T) *runtime.Scheme {
@@ -474,6 +499,98 @@ func TestBackrestVolSyncBindingReconcile_DoesNotRetriggerWhenOnlyLastSyncTimeCha
 	}
 	if len(br.taskCalls) != 2 {
 		t.Fatalf("expected no additional task calls when only lastSyncTime changed, got %d", len(br.taskCalls))
+	}
+}
+
+func TestBackrestVolSyncBindingReconcile_DeduplicatesConcurrentSnapshotTriggers(t *testing.T) {
+	ctx := context.Background()
+	scheme := bindingTestScheme(t)
+
+	b := &v1alpha1.BackrestVolSyncBinding{}
+	b.Namespace = "workload"
+	b.Name = "b"
+	b.Spec.Backrest.URL = "http://backrest.invalid"
+	b.Spec.Source = v1alpha1.VolSyncSourceRef{Kind: "ReplicationSource", Name: "demo"}
+	enabled := true
+	b.Spec.Repo.TriggerTasksOnSnapshot = &enabled
+
+	vs := &unstructured.Unstructured{}
+	vs.SetGroupVersionKind(schema.GroupVersionKind{Group: volsync.Group, Version: volsync.Version, Kind: "ReplicationSource"})
+	vs.SetNamespace("workload")
+	vs.SetName("demo")
+	vs.SetUID(types.UID("1111"))
+	vs.Object = map[string]any{
+		"apiVersion": volsync.Group + "/" + volsync.Version,
+		"kind":       "ReplicationSource",
+		"metadata": map[string]any{
+			"name":      "demo",
+			"namespace": "workload",
+		},
+		"spec": map[string]any{
+			"restic": map[string]any{
+				"repository": "repo-secret",
+			},
+		},
+		"status": map[string]any{
+			"lastSyncTime": "2026-02-24T12:00:00Z",
+			"lastSnapshot": "snap-1",
+		},
+	}
+
+	sec := &corev1.Secret{}
+	sec.Namespace = "workload"
+	sec.Name = "repo-secret"
+	sec.Data = map[string][]byte{
+		"RESTIC_REPOSITORY": []byte("s3://bucket/repo"),
+		"RESTIC_PASSWORD":   []byte("pass"),
+	}
+	sec.SetUID(types.UID("2222"))
+	sec.SetResourceVersion("1")
+
+	c := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&v1alpha1.BackrestVolSyncBinding{}).
+		WithObjects(b, vs, sec).
+		Build()
+
+	firstTaskStarted := make(chan struct{})
+	releaseTaskCalls := make(chan struct{})
+	br := &fakeBackrestRepoClient{
+		firstTaskStarted: firstTaskStarted,
+		releaseTaskCalls: releaseTaskCalls,
+	}
+	r := &BackrestVolSyncBindingReconciler{
+		Client: c,
+		Scheme: scheme,
+		BackrestClientFactory: func(_ string, _ backrest.Auth) backrestRepoClient {
+			return br
+		},
+	}
+
+	req := ctrl.Request{NamespacedName: types.NamespacedName{Namespace: b.Namespace, Name: b.Name}}
+	errCh := make(chan error, 2)
+	go func() {
+		_, err := r.Reconcile(ctx, req)
+		errCh <- err
+	}()
+	<-firstTaskStarted
+	go func() {
+		_, err := r.Reconcile(ctx, req)
+		errCh <- err
+	}()
+	close(releaseTaskCalls)
+
+	for i := 0; i < 2; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatalf("reconcile #%d: %v", i+1, err)
+		}
+	}
+
+	taskCalls := br.snapshotTaskCalls()
+	if len(taskCalls) != 2 {
+		t.Fatalf("expected one index and one stats task call total, got %#v", taskCalls)
+	}
+	if taskCalls[0] != v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS || taskCalls[1] != v1.DoRepoTaskRequest_TASK_STATS {
+		t.Fatalf("unexpected task order: %#v", taskCalls)
 	}
 }
 
