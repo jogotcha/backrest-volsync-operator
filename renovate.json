@@ -3,6 +3,14 @@
   "extends": [
     "config:recommended"
   ],
+  "packageRules": [
+    {
+      "matchDatasources": [
+        "golang-version"
+      ],
+      "rangeStrategy": "bump"
+    }
+  ],
   "ignorePaths": [
     "charts/backrest-volsync-operator/values.yaml"
   ]
