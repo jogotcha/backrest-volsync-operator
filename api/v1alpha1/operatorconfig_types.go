@@ -56,10 +56,6 @@ type BackrestVolSyncOperatorConfigStatus struct {
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 }
 
-func init() {
-	SchemeBuilder.Register(&BackrestVolSyncOperatorConfig{}, &BackrestVolSyncOperatorConfigList{})
-}
-
 // DeepCopyInto, DeepCopy, and DeepCopyObject are implemented manually to avoid requiring codegen.
 func (in *BackrestVolSyncOperatorConfig) DeepCopyInto(out *BackrestVolSyncOperatorConfig) {
 	*out = *in
