@@ -1,8 +1,9 @@
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
 const (
@@ -12,6 +13,17 @@ const (
 
 var (
 	GroupVersion  = schema.GroupVersion{Group: Group, Version: Version}
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme   = SchemeBuilder.AddToScheme
 )
+
+func addKnownTypes(s *runtime.Scheme) error {
+	s.AddKnownTypes(GroupVersion,
+		&BackrestVolSyncBinding{},
+		&BackrestVolSyncBindingList{},
+		&BackrestVolSyncOperatorConfig{},
+		&BackrestVolSyncOperatorConfigList{},
+	)
+	metav1.AddToGroupVersion(s, GroupVersion)
+	return nil
+}
