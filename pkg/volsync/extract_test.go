@@ -64,7 +64,7 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 
 	t.Run("non source ignored", func(t *testing.T) {
 		obj := mk("ReplicationDestination", map[string]any{})
-		marker, ready, err := ReplicationSourceCompletionMarker(obj)
+		marker, syncTime, ready, err := ReplicationSourceCompletionMarker(obj)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -73,12 +73,15 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 		}
 		if marker != "" {
 			t.Fatalf("expected empty marker, got %q", marker)
+		}
+		if syncTime != "" {
+			t.Fatalf("expected empty syncTime, got %q", syncTime)
 		}
 	})
 
 	t.Run("no status fields", func(t *testing.T) {
 		obj := mk("ReplicationSource", map[string]any{"status": map[string]any{}})
-		marker, ready, err := ReplicationSourceCompletionMarker(obj)
+		marker, syncTime, ready, err := ReplicationSourceCompletionMarker(obj)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -87,6 +90,9 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 		}
 		if marker != "" {
 			t.Fatalf("expected empty marker, got %q", marker)
+		}
+		if syncTime != "" {
+			t.Fatalf("expected empty syncTime, got %q", syncTime)
 		}
 	})
 
@@ -96,7 +102,7 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 				"lastSyncTime": "2026-02-24T12:00:00Z",
 			},
 		})
-		marker, ready, err := ReplicationSourceCompletionMarker(obj)
+		marker, syncTime, ready, err := ReplicationSourceCompletionMarker(obj)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -106,6 +112,9 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 		expected := "lastSyncTime=2026-02-24T12:00:00Z"
 		if marker != expected {
 			t.Fatalf("expected %q, got %q", expected, marker)
+		}
+		if syncTime != "2026-02-24T12:00:00Z" {
+			t.Fatalf("expected syncTime to match lastSyncTime, got %q", syncTime)
 		}
 	})
 
@@ -120,7 +129,7 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 				},
 			},
 		})
-		marker, ready, err := ReplicationSourceCompletionMarker(obj)
+		marker, syncTime, ready, err := ReplicationSourceCompletionMarker(obj)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -131,6 +140,9 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 		if marker != expected {
 			t.Fatalf("expected %q, got %q", expected, marker)
 		}
+		if syncTime != "2026-02-24T12:00:00Z" {
+			t.Fatalf("expected syncTime preserved, got %q", syncTime)
+		}
 	})
 
 	t.Run("marker remains stable when only lastSyncTime changes", func(t *testing.T) {
@@ -140,7 +152,7 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 				"lastSnapshot": "snap-a",
 			},
 		})
-		marker1, ready, err := ReplicationSourceCompletionMarker(obj)
+		marker1, syncTime1, ready, err := ReplicationSourceCompletionMarker(obj)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -149,7 +161,7 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 		}
 
 		obj.Object["status"].(map[string]any)["lastSyncTime"] = "2026-02-24T12:05:00Z"
-		marker2, ready, err := ReplicationSourceCompletionMarker(obj)
+		marker2, syncTime2, ready, err := ReplicationSourceCompletionMarker(obj)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
@@ -160,6 +172,42 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 		if marker1 != "lastSnapshot=snap-a" || marker2 != "lastSnapshot=snap-a" {
 			t.Fatalf("expected stable snapshot marker, got marker1=%q marker2=%q", marker1, marker2)
 		}
+		if syncTime1 != "2026-02-24T12:00:00Z" || syncTime2 != "2026-02-24T12:05:00Z" {
+			t.Fatalf("expected sync times to reflect status changes, got syncTime1=%q syncTime2=%q", syncTime1, syncTime2)
+		}
+	})
+
+	t.Run("field transition keeps same sync time", func(t *testing.T) {
+		obj := mk("ReplicationSource", map[string]any{
+			"status": map[string]any{
+				"lastSyncTime": "2026-02-24T12:00:00Z",
+				"lastSnapshot": "snap-a",
+			},
+		})
+		marker1, syncTime1, ready, err := ReplicationSourceCompletionMarker(obj)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if !ready {
+			t.Fatalf("expected ready=true")
+		}
+
+		delete(obj.Object["status"].(map[string]any), "lastSnapshot")
+		obj.Object["status"].(map[string]any)["lastSnapshotID"] = "snap-a"
+		marker2, syncTime2, ready, err := ReplicationSourceCompletionMarker(obj)
+		if err != nil {
+			t.Fatalf("expected nil error, got %v", err)
+		}
+		if !ready {
+			t.Fatalf("expected ready=true")
+		}
+
+		if marker1 != "lastSnapshot=snap-a" || marker2 != "lastSnapshotID=snap-a" {
+			t.Fatalf("expected marker field transition, got marker1=%q marker2=%q", marker1, marker2)
+		}
+		if syncTime1 != "2026-02-24T12:00:00Z" || syncTime2 != "2026-02-24T12:00:00Z" {
+			t.Fatalf("expected syncTime to remain stable, got syncTime1=%q syncTime2=%q", syncTime1, syncTime2)
+		}
 	})
 
 	t.Run("wrong field type returns error", func(t *testing.T) {
@@ -168,7 +216,7 @@ func TestReplicationSourceCompletionMarker(t *testing.T) {
 				"lastSyncTime": 123,
 			},
 		})
-		_, _, err := ReplicationSourceCompletionMarker(obj)
+		_, _, _, err := ReplicationSourceCompletionMarker(obj)
 		if err == nil {
 			t.Fatalf("expected error")
 		}
