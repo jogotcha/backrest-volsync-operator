@@ -56,6 +56,18 @@ kubectl apply -f charts/backrest-volsync-operator/examples/backrestvolsyncbindin
 2. Set `spec.bindingGeneration.policy` to `Annotated` or `All`.
 3. If using `Annotated`, add annotation `backrest.garethgeorge.com/binding="true"` to eligible VolSync objects.
 
+## Screenshots
+
+Example Backrest views after the operator has registered a VolSync repository and indexed its snapshots:
+
+### Repository tree view
+
+![Backrest repository tree view showing indexed VolSync snapshots](docs/screenshots/backrest-repo-tree-view.png)
+
+### Repository stats view
+
+![Backrest repository stats view showing snapshot count, size, compression ratio, and blob count](docs/screenshots/backrest-repo-stats-view.png)
+
 ## Development
 
 ```sh
