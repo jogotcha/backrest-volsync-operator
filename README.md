@@ -1,11 +1,11 @@
 
 # backrest-volsync-operator (prototype)
 
-Kubernetes operator that connects VolSync restic repositories (ReplicationSource/ReplicationDestination) to a Backrest instance.
+Kubernetes operator that connects [VolSync](https://volsync.readthedocs.io/) restic repositories (`ReplicationSource`/`ReplicationDestination`) to a [Backrest](https://github.com/garethgeorge/backrest) instance.
 
 ## What it does
 
-- Watches `BackrestVolSyncBinding` resources and ensures the referenced VolSync repository is registered/configured in Backrest.
+- Watches `BackrestVolSyncBinding` resources and ensures the referenced [VolSync](https://volsync.readthedocs.io/) repository is registered/configured in [Backrest](https://github.com/garethgeorge/backrest).
 - Optionally auto-creates managed bindings for VolSync objects when enabled via `BackrestVolSyncOperatorConfig`.
 
 ## What it does not
