@@ -230,7 +230,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 		}
 	}
 
-	marker, ready, err := volsync.ReplicationSourceCompletionMarker(vsObj)
+	marker, syncTime, ready, err := volsync.ReplicationSourceCompletionMarker(vsObj)
 	if err != nil {
 		errHash := hashString(err.Error())
 		if binding.Status.LastRepoTaskErrorHash == errHash {
@@ -246,7 +246,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 	if !ready || marker == "" {
 		return false, nil
 	}
-	if binding.Status.LastSnapshotMarker == marker {
+	if snapshotTaskStateMatches(marker, syncTime, binding.Status.LastSnapshotMarker, binding.Status.LastSnapshotSyncTime) {
 		return false, nil
 	}
 
@@ -256,7 +256,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 	}
 
 	repoID := desiredRepoID(binding)
-	if binding.Status.LastIndexedSnapshotMarker != marker {
+	if !snapshotTaskStateMatches(marker, syncTime, binding.Status.LastIndexedSnapshotMarker, binding.Status.LastIndexedSnapshotSyncTime) {
 		if err := brClient.DoRepoTask(ctx, repoID, v1.DoRepoTaskRequest_TASK_INDEX_SNAPSHOTS); err != nil {
 			errHash := hashString(err.Error())
 			setTaskErrorHash(errHash)
@@ -274,6 +274,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 			return statusChanged, releaseTaskTrigger
 		}
 		binding.Status.LastIndexedSnapshotMarker = marker
+		binding.Status.LastIndexedSnapshotSyncTime = syncTime
 		statusChanged = true
 	}
 
@@ -296,6 +297,7 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 
 	now := metav1.Now()
 	binding.Status.LastSnapshotMarker = marker
+	binding.Status.LastSnapshotSyncTime = syncTime
 	binding.Status.LastRepoTaskTriggerTime = &now
 	if binding.Status.LastRepoTaskErrorHash != "" {
 		binding.Status.LastRepoTaskErrorHash = ""
@@ -311,6 +313,16 @@ func (r *BackrestVolSyncBindingReconciler) triggerSnapshotTasks(ctx context.Cont
 		"name", binding.Name,
 	)
 	return statusChanged, releaseTaskTrigger
+}
+
+func snapshotTaskStateMatches(marker, syncTime, storedMarker, storedSyncTime string) bool {
+	if marker != "" && storedMarker != "" && marker == storedMarker {
+		return true
+	}
+	if syncTime != "" && storedSyncTime != "" && syncTime == storedSyncTime {
+		return true
+	}
+	return false
 }
 
 func (r *BackrestVolSyncBindingReconciler) claimTaskTrigger(binding *v1alpha1.BackrestVolSyncBinding, marker string) (func(), bool) {

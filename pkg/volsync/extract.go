@@ -23,12 +23,21 @@ func RepositorySecretName(obj *unstructured.Unstructured) (string, error) {
 	return secretName, nil
 }
 
-func ReplicationSourceCompletionMarker(obj *unstructured.Unstructured) (string, bool, error) {
+func ReplicationSourceCompletionMarker(obj *unstructured.Unstructured) (string, string, bool, error) {
 	if obj == nil {
-		return "", false, fmt.Errorf("volsync object is nil")
+		return "", "", false, fmt.Errorf("volsync object is nil")
 	}
 	if obj.GetKind() != "ReplicationSource" {
-		return "", false, nil
+		return "", "", false, nil
+	}
+
+	lastSyncTime, found, err := unstructured.NestedString(obj.Object, "status", "lastSyncTime")
+	if err != nil {
+		return "", "", false, fmt.Errorf("read status.lastSyncTime: %w", err)
+	}
+	lastSyncTime = strings.TrimSpace(lastSyncTime)
+	if !found {
+		lastSyncTime = ""
 	}
 
 	for _, p := range []struct {
@@ -42,22 +51,16 @@ func ReplicationSourceCompletionMarker(obj *unstructured.Unstructured) (string, 
 	} {
 		v, found, err := unstructured.NestedString(obj.Object, p.path...)
 		if err != nil {
-			return "", false, fmt.Errorf("read %s: %w", strings.Join(p.path, "."), err)
+			return "", "", false, fmt.Errorf("read %s: %w", strings.Join(p.path, "."), err)
 		}
 		v = strings.TrimSpace(v)
 		if found && v != "" {
-			return p.key + "=" + v, true, nil
+			return p.key + "=" + v, lastSyncTime, true, nil
 		}
 	}
-
-	lastSyncTime, found, err := unstructured.NestedString(obj.Object, "status", "lastSyncTime")
-	if err != nil {
-		return "", false, fmt.Errorf("read status.lastSyncTime: %w", err)
-	}
-	lastSyncTime = strings.TrimSpace(lastSyncTime)
 	if found && lastSyncTime != "" {
-		return "lastSyncTime=" + lastSyncTime, true, nil
+		return "lastSyncTime=" + lastSyncTime, lastSyncTime, true, nil
 	}
 
-	return "", false, nil
+	return "", "", false, nil
 }

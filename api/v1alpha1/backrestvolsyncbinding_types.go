@@ -61,14 +61,16 @@ type BackrestVolSyncBindingStatus struct {
 	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
 	Conditions         []metav1.Condition `json:"conditions,omitempty"`
 
-	ResolvedRepositorySecret  string       `json:"resolvedRepositorySecret,omitempty"`
-	LastAppliedInputHash      string       `json:"lastAppliedInputHash,omitempty"`
-	LastApplyTime             *metav1.Time `json:"lastApplyTime,omitempty"`
-	LastErrorHash             string       `json:"lastErrorHash,omitempty"`
-	LastIndexedSnapshotMarker string       `json:"lastIndexedSnapshotMarker,omitempty"`
-	LastSnapshotMarker        string       `json:"lastSnapshotMarker,omitempty"`
-	LastRepoTaskTriggerTime   *metav1.Time `json:"lastRepoTaskTriggerTime,omitempty"`
-	LastRepoTaskErrorHash     string       `json:"lastRepoTaskErrorHash,omitempty"`
+	ResolvedRepositorySecret    string       `json:"resolvedRepositorySecret,omitempty"`
+	LastAppliedInputHash        string       `json:"lastAppliedInputHash,omitempty"`
+	LastApplyTime               *metav1.Time `json:"lastApplyTime,omitempty"`
+	LastErrorHash               string       `json:"lastErrorHash,omitempty"`
+	LastIndexedSnapshotMarker   string       `json:"lastIndexedSnapshotMarker,omitempty"`
+	LastIndexedSnapshotSyncTime string       `json:"lastIndexedSnapshotSyncTime,omitempty"`
+	LastSnapshotMarker          string       `json:"lastSnapshotMarker,omitempty"`
+	LastSnapshotSyncTime        string       `json:"lastSnapshotSyncTime,omitempty"`
+	LastRepoTaskTriggerTime     *metav1.Time `json:"lastRepoTaskTriggerTime,omitempty"`
+	LastRepoTaskErrorHash       string       `json:"lastRepoTaskErrorHash,omitempty"`
 }
 
 // DeepCopyInto, DeepCopy, and DeepCopyObject are implemented manually to avoid requiring codegen.
@@ -79,13 +81,15 @@ func (in *BackrestVolSyncBinding) DeepCopyInto(out *BackrestVolSyncBinding) {
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	out.Spec = in.Spec
 	out.Status = BackrestVolSyncBindingStatus{
-		ObservedGeneration:        in.Status.ObservedGeneration,
-		ResolvedRepositorySecret:  in.Status.ResolvedRepositorySecret,
-		LastAppliedInputHash:      in.Status.LastAppliedInputHash,
-		LastErrorHash:             in.Status.LastErrorHash,
-		LastIndexedSnapshotMarker: in.Status.LastIndexedSnapshotMarker,
-		LastSnapshotMarker:        in.Status.LastSnapshotMarker,
-		LastRepoTaskErrorHash:     in.Status.LastRepoTaskErrorHash,
+		ObservedGeneration:          in.Status.ObservedGeneration,
+		ResolvedRepositorySecret:    in.Status.ResolvedRepositorySecret,
+		LastAppliedInputHash:        in.Status.LastAppliedInputHash,
+		LastErrorHash:               in.Status.LastErrorHash,
+		LastIndexedSnapshotMarker:   in.Status.LastIndexedSnapshotMarker,
+		LastIndexedSnapshotSyncTime: in.Status.LastIndexedSnapshotSyncTime,
+		LastSnapshotMarker:          in.Status.LastSnapshotMarker,
+		LastSnapshotSyncTime:        in.Status.LastSnapshotSyncTime,
+		LastRepoTaskErrorHash:       in.Status.LastRepoTaskErrorHash,
 	}
 	if in.Status.LastApplyTime != nil {
 		out.Status.LastApplyTime = in.Status.LastApplyTime.DeepCopy()
