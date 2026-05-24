@@ -1,7 +1,11 @@
-
 # backrest-volsync-operator (prototype)
 
-Kubernetes operator that connects [VolSync](https://volsync.readthedocs.io/) restic repositories (`ReplicationSource`/`ReplicationDestination`) to a [Backrest](https://github.com/garethgeorge/backrest) instance.
+Kubernetes operator that connects [VolSync](https://volsync.readthedocs.io/) [restic](https://restic.net/) repositories (`ReplicationSource`/`ReplicationDestination`) to a [Backrest](https://github.com/garethgeorge/backrest) instance.
+
+## Prerequisites
+
+- [VolSync](https://volsync.readthedocs.io/en/stable/installation/index.html) installed in the cluster with at least one `ReplicationSource` or `ReplicationDestination` using a restic repository.
+- A running [Backrest](https://github.com/garethgeorge/backrest) instance reachable from within the cluster.
 
 ## What it does
 
@@ -11,7 +15,7 @@ Kubernetes operator that connects [VolSync](https://volsync.readthedocs.io/) res
 ## What it does not
 
 - Remove repositories from Backrest.
-- Backrest Auth not tested
+- Backrest authentication is untested.
 
 ## Custom Resources
 
@@ -71,9 +75,9 @@ Example Backrest views after the operator has registered a VolSync repository an
 ## Development
 
 ```sh
-make test
-make lint
-make docker-build
+make test         # run unit tests
+make lint         # run golangci-lint (skipped if not installed)
+make docker-build # build the operator image
 ```
 
 ## Release automation
