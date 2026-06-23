@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.3.1](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.3.0...v0.3.1) (2026-06-23)
+
+
+### Bug Fixes
+
+* bump Go to 1.25.9 and teach Renovate to bump it ([#67](https://github.com/jogotcha/backrest-volsync-operator/issues/67)) ([e9201fe](https://github.com/jogotcha/backrest-volsync-operator/commit/e9201fe60b682acbf32601e7b9cd1507208b6ffe))
+* dedupe same-snapshot stats triggers ([#82](https://github.com/jogotcha/backrest-volsync-operator/issues/82)) ([33f6468](https://github.com/jogotcha/backrest-volsync-operator/commit/33f6468b3cf7e45190a3a88de1f7afcd291bab94))
+* **deps:** update k8s.io/utils digest to 28399d8 ([#60](https://github.com/jogotcha/backrest-volsync-operator/issues/60)) ([b7d23c6](https://github.com/jogotcha/backrest-volsync-operator/commit/b7d23c60abcf6509993b96b01d06367e1c224388))
+* **deps:** update k8s.io/utils digest to a95e086 ([#88](https://github.com/jogotcha/backrest-volsync-operator/issues/88)) ([cc32336](https://github.com/jogotcha/backrest-volsync-operator/commit/cc32336f027e7bfb4cc80fc3ff6e39cd1672dcc7))
+* **deps:** update k8s.io/utils digest to ff6756f ([#76](https://github.com/jogotcha/backrest-volsync-operator/issues/76)) ([8540de0](https://github.com/jogotcha/backrest-volsync-operator/commit/8540de0bac0ba4bb70167c3e60129662e32b96e9))
+* **deps:** update kubernetes monorepo to v0.35.3 ([#59](https://github.com/jogotcha/backrest-volsync-operator/issues/59)) ([8d80c3c](https://github.com/jogotcha/backrest-volsync-operator/commit/8d80c3cafceaf8959ad9d9996e4dc13c20016854))
+* **deps:** update kubernetes monorepo to v0.36.0 ([#69](https://github.com/jogotcha/backrest-volsync-operator/issues/69)) ([f9e07b7](https://github.com/jogotcha/backrest-volsync-operator/commit/f9e07b7e199303d7442acbdc5bd115d2a7a82f65))
+* **deps:** update kubernetes monorepo to v0.36.1 ([#78](https://github.com/jogotcha/backrest-volsync-operator/issues/78)) ([4b73f17](https://github.com/jogotcha/backrest-volsync-operator/commit/4b73f17ebbf81d2d51aede6fb9b852f6d345e849))
+* **deps:** update kubernetes monorepo to v0.36.2 ([#87](https://github.com/jogotcha/backrest-volsync-operator/issues/87)) ([40449b9](https://github.com/jogotcha/backrest-volsync-operator/commit/40449b9b44a9789b7561cb4b13815f5a02782d40))
+* **deps:** update module connectrpc.com/connect to v1.20.0 ([#70](https://github.com/jogotcha/backrest-volsync-operator/issues/70)) ([72e58df](https://github.com/jogotcha/backrest-volsync-operator/commit/72e58df177497f45f175695af21da4ee7570e23e))
+* **deps:** update module github.com/garethgeorge/backrest to v1.12.1 ([#58](https://github.com/jogotcha/backrest-volsync-operator/issues/58)) ([18131ad](https://github.com/jogotcha/backrest-volsync-operator/commit/18131ad02f11ba737ecb693f90be98541f5a6556))
+* **deps:** update module github.com/garethgeorge/backrest to v1.13.0 ([#75](https://github.com/jogotcha/backrest-volsync-operator/issues/75)) ([ea9a3a3](https://github.com/jogotcha/backrest-volsync-operator/commit/ea9a3a3e2360bf3558f9a9d152f50cf3363c4e59))
+* **deps:** update module go.uber.org/zap to v1.28.0 ([#73](https://github.com/jogotcha/backrest-volsync-operator/issues/73)) ([591a9ba](https://github.com/jogotcha/backrest-volsync-operator/commit/591a9ba09f3067277507340d05df2c1761bfec03))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.24.1 ([#81](https://github.com/jogotcha/backrest-volsync-operator/issues/81)) ([ed85eb7](https://github.com/jogotcha/backrest-volsync-operator/commit/ed85eb7f06bc8ce49d2d07721b2d385d8c444cad))
+
 ## [0.3.0](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.2.2...v0.3.0) (2026-03-08)
 
 
