@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/jogotcha/backrest-volsync-operator/compare/chart-v0.2.1...chart-v0.3.0) (2026-06-23)
+
+
+### Features
+
+* trigger Backrest INDEX_SNAPSHOTS and STATS from VolSync snapshots ([#42](https://github.com/jogotcha/backrest-volsync-operator/issues/42)) ([a4ae8b2](https://github.com/jogotcha/backrest-volsync-operator/commit/a4ae8b2b124900e81fec45bc820226f7e41f4be9))
+
+
+### Bug Fixes
+
+* **chart:** default image tag to Chart appVersion ([#37](https://github.com/jogotcha/backrest-volsync-operator/issues/37)) ([8012332](https://github.com/jogotcha/backrest-volsync-operator/commit/80123327e87f3dce23949605d1d4a29521f3ae88))
+* dedupe same-snapshot stats triggers ([#82](https://github.com/jogotcha/backrest-volsync-operator/issues/82)) ([33f6468](https://github.com/jogotcha/backrest-volsync-operator/commit/33f6468b3cf7e45190a3a88de1f7afcd291bab94))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.23.3 - abandoned ([#72](https://github.com/jogotcha/backrest-volsync-operator/issues/72)) ([ad594d4](https://github.com/jogotcha/backrest-volsync-operator/commit/ad594d49ed581824c459c4eb6260c04586814b93))
+
 ## [0.2.1](https://github.com/jogotcha/backrest-volsync-operator/compare/chart-v0.2.0...chart-v0.2.1) (2026-02-17)
 
 
