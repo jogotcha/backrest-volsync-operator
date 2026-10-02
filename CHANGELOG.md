@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.2](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.3.1...v0.3.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **deps:** address remaining gRPC package vulnerability ([1b1623c](https://github.com/jogotcha/backrest-volsync-operator/commit/1b1623c6d1ce138b4187e4ea79b72d9cc66b8454))
+* **deps:** merge dependency updates and patch gRPC vulnerability ([1c15dcb](https://github.com/jogotcha/backrest-volsync-operator/commit/1c15dcb679cd1f2fe3e79f3c2ea486ae90b5a25c))
+* **deps:** patch gRPC vulnerability and align Go build toolchain ([72c323e](https://github.com/jogotcha/backrest-volsync-operator/commit/72c323ed7e6a855f0de62e506a0e90cfdcd8cae7))
+* **deps:** update kubernetes monorepo to v0.37.1 ([87d2d2f](https://github.com/jogotcha/backrest-volsync-operator/commit/87d2d2f4e8d7fdf6a1bf77148fd2cedee5c4f3fa))
+* **deps:** update module connectrpc.com/connect to v1.21.0 ([#111](https://github.com/jogotcha/backrest-volsync-operator/issues/111)) ([da2b491](https://github.com/jogotcha/backrest-volsync-operator/commit/da2b49127e6f5b698a962535ccdc4308187ddaef))
+* **deps:** update module sigs.k8s.io/controller-runtime to v0.25.2 ([8b5e4c8](https://github.com/jogotcha/backrest-volsync-operator/commit/8b5e4c878f623112abd41cf6412e162dca690ec0))
+
 ## [0.3.1](https://github.com/jogotcha/backrest-volsync-operator/compare/v0.3.0...v0.3.1) (2026-08-31)
 
 
