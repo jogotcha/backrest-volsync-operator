@@ -3,7 +3,7 @@ module github.com/jogotcha/backrest-volsync-operator
 go 1.27.0
 
 require (
-	connectrpc.com/connect v1.20.0
+	connectrpc.com/connect v1.21.0
 	github.com/garethgeorge/backrest v1.14.1
 	github.com/go-logr/logr v1.4.4
 	go.uber.org/zap v1.28.0
