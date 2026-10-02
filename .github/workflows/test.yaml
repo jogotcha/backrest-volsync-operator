@@ -46,7 +46,7 @@ jobs:
       - name: GolangCI-Lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.13.2
+          version: v2.14.0
           args: --timeout=5m
 
   helm-lint:
@@ -59,7 +59,7 @@ jobs:
       - name: Set up Helm
         uses: azure/setup-helm@v5
         with:
-          version: v4.2.4
+          version: v4.3.0
 
       - name: Helm lint
         run: helm lint charts/backrest-volsync-operator
