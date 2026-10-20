@@ -1,6 +1,6 @@
 module github.com/jogotcha/backrest-volsync-operator
 
-go 1.27.1
+go 1.27.3
 
 require (
 	connectrpc.com/connect v1.21.0
