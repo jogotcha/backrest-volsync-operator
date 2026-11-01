@@ -1,9 +1,9 @@
-# syntax=docker/dockerfile:1.27
+# syntax=docker/dockerfile:1.28
 
 ARG BUILDPLATFORM
 
 # Build the operator manager
-FROM --platform=$BUILDPLATFORM golang:1.27.1 AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.3 AS build
 
 ARG TARGETOS
 ARG TARGETARCH
